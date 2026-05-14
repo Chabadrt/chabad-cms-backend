@@ -148,7 +148,7 @@ app.get('/rsvps/latest', (req, res) => {
 
 // ── START ─────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`✡️  Chabad SMS System running on port ${PORT}`);
   console.log(`   Twilio number: ${process.env.TWILIO_PHONE_NUMBER}`);
   console.log(`   Admin phone:   ${process.env.ADMIN_PHONE}`);
