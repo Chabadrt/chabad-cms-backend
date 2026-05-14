@@ -1,18 +1,19 @@
 // payments.js — Handles all Stripe interactions.
 // Charges cards on file and creates payment links for new donors.
 
-require('dotenv').config();
 const Stripe = require('stripe');
 
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+// Lazy load — only initializes when a payment function is actually called
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY not set');
+  return Stripe(process.env.STRIPE_SECRET_KEY);
+}
 
 // ── CHARGE A SAVED CARD ───────────────────────────────────
-// Used when a returning guest has a card on file.
-// stripeCustomerId is saved in our contact database.
 
 async function chargeCardOnFile(stripeCustomerId, amount, eventName) {
   try {
-    // Get the customer's default payment method
+    const stripe = getStripe();
     const customer = await stripe.customers.retrieve(stripeCustomerId);
     const paymentMethodId = customer.invoice_settings?.default_payment_method;
 
@@ -21,9 +22,8 @@ async function chargeCardOnFile(stripeCustomerId, amount, eventName) {
       return { success: false };
     }
 
-    // Create and confirm a payment intent
     const intent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Stripe uses cents
+      amount: Math.round(amount * 100),
       currency: 'usd',
       customer: stripeCustomerId,
       payment_method: paymentMethodId,
@@ -43,12 +43,11 @@ async function chargeCardOnFile(stripeCustomerId, amount, eventName) {
 }
 
 // ── CREATE A PAYMENT LINK ─────────────────────────────────
-// For new guests without a card on file.
-// Creates a Stripe Payment Link they can open in their browser.
 
 async function createPaymentLink(amount, eventName) {
   try {
-    // Create a one-time price for this exact amount
+    const stripe = getStripe();
+
     const price = await stripe.prices.create({
       unit_amount: Math.round(amount * 100),
       currency: 'usd',
@@ -58,12 +57,11 @@ async function createPaymentLink(amount, eventName) {
       }
     });
 
-    // Create the payment link
     const link = await stripe.paymentLinks.create({
       line_items: [{ price: price.id, quantity: 1 }],
       after_completion: {
         type: 'redirect',
-        redirect: { url: 'https://chabadrivertowns.com' } // change to your website
+        redirect: { url: 'https://chabadrivertowns.com' }
       },
       metadata: { event: eventName, source: 'sms-rsvp' }
     });
@@ -73,18 +71,16 @@ async function createPaymentLink(amount, eventName) {
 
   } catch (err) {
     console.error(`[STRIPE ERROR] createPaymentLink:`, err.message);
-    // Fallback to a generic donate link if something goes wrong
     return 'https://chabadrivertowns.com/donate';
   }
 }
 
 // ── CREATE OR GET STRIPE CUSTOMER ─────────────────────────
-// Called when a new contact donates for the first time.
-// Saves their card so future events can use card-on-file.
 
 async function getOrCreateCustomer(phone, name, email = null) {
   try {
-    // Check if customer already exists by phone metadata
+    const stripe = getStripe();
+
     const existing = await stripe.customers.search({
       query: `metadata['phone']:'${phone}'`,
       limit: 1
@@ -94,7 +90,6 @@ async function getOrCreateCustomer(phone, name, email = null) {
       return existing.data[0].id;
     }
 
-    // Create new customer
     const customer = await stripe.customers.create({
       name: name || 'Chabad Guest',
       phone,
