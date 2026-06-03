@@ -65,7 +65,7 @@ app.post('/blast', async (req, res) => {
   const eventId = `evt_${Date.now()}`;
   const fullEvent = { id: eventId, ...event, sentAt: new Date().toISOString(), sentTo: phones.length };
   db.saveEvent(fullEvent);
-  let msgBody = `Hi! This is Rabbi Silverman's new texting bot 🤖\n(yes, the Rabbi has been having a little too much fun with AI lately 😄)\n\n`;
+  let msgBody = `Hi! This is Rabbi Benjy's new texting bot 🤖\n(yes, the Rabbi has been having a little too much fun with AI lately 😄)\n\n`;
   msgBody += `Will you be joining us for ${event.name}`;
   if (event.date) msgBody += ` — ${event.date}`;
   if (event.time) msgBody += ` at ${event.time}`;
