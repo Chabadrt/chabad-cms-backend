@@ -12,3 +12,9 @@ app.post('/contacts/import', (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ── DASHBOARD ─────────────────────────────────────────────
+const path = require('path');
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
