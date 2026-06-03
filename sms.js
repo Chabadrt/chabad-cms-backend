@@ -4,8 +4,65 @@
 const db = require('./db');
 const { chargeCardOnFile, createPaymentLink } = require('./payments');
 
+// ── FUZZY REPLY MATCHING ──────────────────────────────────
+// Handles natural language replies so older folks don't get stuck.
+
+function parseYesNo(msg) {
+  const m = msg.toLowerCase().trim();
+  
+  // Clear YES signals
+  const yesWords = ['1', 'yes', 'yeah', 'yep', 'yup', 'sure', 'ok', 'okay', 
+                    'definitely', 'absolutely', 'of course', 'will be there',
+                    'ill be there', "i'll be there", 'coming', 'i'll come',
+                    'count me in', 'בע"ה', 'im in', "i'm in", 'iy"h',
+                    'bezras hashem', "b'ezras hashem", 'iyh', 'be there'];
+  
+  // Clear NO signals  
+  const noWords = ['2', 'no', 'nope', 'cant', "can't", 'cannot', 'sorry',
+                   'unfortunately', 'not this time', 'will not', "won't",
+                   'unable', 'miss', 'missing', 'not coming', 'skip'];
+
+  for (const word of yesWords) {
+    if (m === word || m.includes(word)) return 'yes';
+  }
+  for (const word of noWords) {
+    if (m === word || m.includes(word)) return 'no';
+  }
+  return null;
+}
+
+function parseDonation(msg) {
+  const m = msg.toLowerCase().trim();
+  
+  // Preset amounts
+  if (m === '1' || m === '$5' || m === '5') return 5;
+  if (m === '2' || m === '$10' || m === '10') return 10;
+  if (m === '3' || m === '$18' || m === '18' || m === 'chai' || m === 'חי') return 18;
+  
+  // Skip signals
+  const skipWords = ['n', 'no', 'skip', 'pass', 'next time', 'not now', 'nope'];
+  for (const word of skipWords) {
+    if (m === word || m.includes(word)) return 'skip';
+  }
+  
+  // Free-form amount
+  const cleaned = msg.replace(/[$,\s]/g, '');
+  const num = parseFloat(cleaned);
+  if (!isNaN(num) && num > 0 && num <= 10000) return Math.round(num * 100) / 100;
+  
+  return null;
+}
+
+function parseConfirm(msg) {
+  const m = msg.toLowerCase().trim();
+  const yesWords = ['y', 'yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'confirm', 'charge it', 'go ahead'];
+  const noWords = ['n', 'no', 'nope', 'cancel', 'stop', 'different'];
+  for (const word of yesWords) { if (m === word || m.includes(word)) return 'yes'; }
+  for (const word of noWords) { if (m === word || m.includes(word)) return 'no'; }
+  return null;
+}
+
 // ── MAIN HANDLER ──────────────────────────────────────────
-// Called by server.js every time someone texts your Twilio number.
 
 async function handleIncoming(from, body) {
   const phone = from.trim();
@@ -15,7 +72,6 @@ async function handleIncoming(from, body) {
 
   console.log(`[SMS IN] ${phone} | step: ${conv.step} | msg: "${msg}"`);
 
-  // Route based on conversation state
   switch (conv.step) {
     case 'idle':
       return handleIdle(phone, msg, contact, conv);
@@ -23,23 +79,26 @@ async function handleIncoming(from, body) {
       return handleHeadcount(phone, msg, contact, conv);
     case 'await_donation_decision':
       return handleDonationDecision(phone, msg, contact, conv);
+    case 'await_donation_confirm':
+      return handleDonationConfirm(phone, msg, contact, conv);
     case 'await_donation_amount':
       return handleDonationAmount(phone, msg, contact, conv);
-    case 'await_new_card':
-      return handleNewCard(phone, msg, contact, conv);
     default:
       return handleIdle(phone, msg, contact, conv);
   }
 }
 
-// ── STEP 1: Initial reply to blast (1 = yes, 2 = no) ─────
+// ── STEP 1: Initial reply to blast ────────────────────────
 
 async function handleIdle(phone, msg, contact, conv) {
   const event = db.getLatestEvent();
-  if (!event) return "Thanks for texting Chabad of the Rivertowns! Stay tuned for upcoming events. 💛";
+  if (!event) {
+    return "Thanks for texting Chabad of the Rivertowns! Stay tuned for upcoming events. 💛\n\nReply STOP to unsubscribe.";
+  }
 
-  if (msg === '1') {
-    // Save RSVP as yes
+  const answer = parseYesNo(msg);
+
+  if (answer === 'yes') {
     db.saveRsvp(event.id, phone, {
       name: contact?.name || 'Guest',
       status: 'yes'
@@ -47,7 +106,7 @@ async function handleIdle(phone, msg, contact, conv) {
 
     if (event.askHeadcount) {
       db.saveConversation(phone, { step: 'await_headcount', eventId: event.id });
-      return `Wonderful! How many people will be joining you? (Reply with a number)`;
+      return `Wonderful! How many people will be joining you? (Please reply with just a number, e.g. 2)`;
     } else if (event.askDonation) {
       return await startDonationFlow(phone, contact, event);
     } else {
@@ -56,25 +115,25 @@ async function handleIdle(phone, msg, contact, conv) {
     }
   }
 
-  if (msg === '2') {
+  if (answer === 'no') {
     db.saveRsvp(event.id, phone, {
       name: contact?.name || 'Guest',
       status: 'no'
     });
     db.clearConversation(phone);
-    return `No problem! We'll miss you. We'll keep you in the loop for future events. 💛`;
+    return `No problem! We'll miss you. Hope to see you next time. 💛\n\nReply STOP to unsubscribe.`;
   }
 
   // Unrecognized — gently re-prompt
-  return `Hi! Reply 1 to RSVP for our ${event.name} on ${event.date}, or 2 if you can't make it.`;
+  return `Hi! To make sure I get your answer correctly, please reply with just:\n\n1 — Yes, I'll be there 🙏\n2 — Can't make it this time\n\n(This is an automated system — just the number works best! 🤖)`;
 }
 
 // ── STEP 2: Headcount ──────────────────────────────────────
 
 async function handleHeadcount(phone, msg, contact, conv) {
-  const count = parseInt(msg);
+  const count = parseInt(msg.replace(/[^0-9]/g, ''));
   if (isNaN(count) || count < 1 || count > 50) {
-    return `Please reply with a number (e.g. 2) for how many people are joining you.`;
+    return `Please reply with just a number for how many people are joining you (e.g. 2).`;
   }
 
   const event = db.getEvent(conv.eventId);
@@ -89,108 +148,122 @@ async function handleHeadcount(phone, msg, contact, conv) {
   }
 }
 
-// ── STEP 3: Donation decision ──────────────────────────────
+// ── STEP 3: Donation flow ──────────────────────────────────
 
 async function startDonationFlow(phone, contact, event) {
-  if (contact?.cardLast4) {
-    // Returning guest with card on file
-    db.saveConversation(phone, {
-      step: 'await_donation_decision',
-      eventId: event.id
-    });
+  const hasCard = contact?.cardLast4;
+  
+  db.saveConversation(phone, {
+    step: hasCard ? 'await_donation_decision' : 'await_donation_amount',
+    eventId: event.id
+  });
+
+  const donationMenu = event.donationAmounts
+    ? buildDonationMenu(event.donationAmounts)
+    : `1 — $5\n2 — $10\n3 — $18 (Chai ✡️)`;
+
+  if (hasCard) {
     return (
-      `💛 Would you like to support tonight's event?\n\n` +
+      `💛 Would you like to support this event?\n\n` +
+      `${donationMenu}\nN — No thank you\n\n` +
       `You have a card on file ending in ${contact.cardLast4}. ` +
-      `Reply with an amount (e.g. $36) to donate, or N to skip.`
+      `Just reply with a number or N.`
     );
   } else {
-    // New guest — offer link
-    db.saveConversation(phone, {
-      step: 'await_donation_amount',
-      eventId: event.id
-    });
     return (
-      `💛 Would you like to make a donation to support this event?\n\n` +
-      `Reply with an amount (e.g. $36) and we'll send you a secure link, or reply N to skip.`
+      `💛 Would you like to support this event?\n\n` +
+      `${donationMenu}\nN — No thank you\n\n` +
+      `Reply with a number or N to skip.`
     );
   }
+}
+
+function buildDonationMenu(amounts) {
+  return amounts.map((amt, i) => {
+    const label = amt === 18 ? `$18 (Chai ✡️)` : `$${amt}`;
+    return `${i + 1} — ${label}`;
+  }).join('\n');
 }
 
 async function handleDonationDecision(phone, msg, contact, conv) {
-  const upper = msg.toUpperCase();
   const event = db.getEvent(conv.eventId);
+  const amount = parseDonation(msg);
 
-  if (upper === 'N' || upper === 'NO') {
+  if (amount === 'skip' || amount === null && parseYesNo(msg) === 'no') {
     db.clearConversation(phone);
     return confirmationMessage(event);
   }
 
-  // Try to parse a dollar amount
-  const amount = parseDollarAmount(msg);
-  if (!amount) {
-    return `Please reply with an amount (e.g. $36) or N to skip.`;
+  if (amount === null) {
+    return `Please reply with 1 ($5), 2 ($10), 3 ($18 Chai), or N to skip.`;
   }
 
-  // Charge card on file
-  if (contact?.stripeCustomerId) {
-    const result = await chargeCardOnFile(contact.stripeCustomerId, amount, event?.name || 'Chabad Event');
+  // Has card on file — confirm before charging
+  if (contact?.stripeCustomerId && contact?.cardLast4) {
+    db.saveConversation(phone, { ...conv, step: 'await_donation_confirm', donationAmount: amount });
+    return `Charge $${amount} to your card ending in ${contact.cardLast4}?\n\nReply Y to confirm or N to cancel.`;
+  }
+
+  // No card — send payment link
+  return await sendPaymentLink(phone, amount, event, conv);
+}
+
+async function handleDonationConfirm(phone, msg, contact, conv) {
+  const event = db.getEvent(conv.eventId);
+  const answer = parseConfirm(msg);
+
+  if (answer === 'no') {
+    db.clearConversation(phone);
+    return confirmationMessage(event);
+  }
+
+  if (answer === 'yes') {
+    const result = await chargeCardOnFile(contact.stripeCustomerId, conv.donationAmount, event?.name || 'Chabad Event');
     if (result.success) {
-      db.saveRsvp(conv.eventId, phone, { donationAmount: amount, donatedAt: new Date().toISOString() });
+      db.saveRsvp(conv.eventId, phone, { donationAmount: conv.donationAmount, donatedAt: new Date().toISOString() });
       db.clearConversation(phone);
-      return (
-        `✅ Thank you! Your donation of $${amount} has been processed. ` +
-        confirmationMessage(event)
-      );
+      return `✅ Thank you! Your donation of $${conv.donationAmount} has been processed. ${confirmationMessage(event)}`;
     } else {
-      return `There was an issue processing your card. Reply with a different amount or N to skip.`;
+      db.clearConversation(phone);
+      return `There was an issue processing your card. You can donate at chabadrt.org. ${confirmationMessage(event)}`;
     }
   }
 
-  // Fallback to payment link
-  const link = await createPaymentLink(amount, event?.name || 'Chabad Event');
-  db.saveRsvp(conv.eventId, phone, { donationAmount: amount });
-  db.clearConversation(phone);
-  return `Here's your secure payment link:\n🔗 ${link}\n\nThank you so much! 🙏\n\n` + confirmationMessage(event);
+  return `Please reply Y to confirm the charge or N to cancel.`;
 }
 
 async function handleDonationAmount(phone, msg, contact, conv) {
-  const upper = msg.toUpperCase();
   const event = db.getEvent(conv.eventId);
+  const amount = parseDonation(msg);
 
-  if (upper === 'N' || upper === 'NO') {
+  if (amount === 'skip' || amount === null && parseYesNo(msg) === 'no') {
     db.clearConversation(phone);
     return confirmationMessage(event);
   }
 
-  const amount = parseDollarAmount(msg);
-  if (!amount) {
-    return `Please reply with an amount (e.g. $36) or N to skip.`;
+  if (amount === null) {
+    return `Please reply with 1 ($5), 2 ($10), 3 ($18 Chai), or N to skip.`;
   }
 
+  return await sendPaymentLink(phone, amount, event, conv);
+}
+
+async function sendPaymentLink(phone, amount, event, conv) {
   const link = await createPaymentLink(amount, event?.name || 'Chabad Event');
   db.saveRsvp(conv.eventId, phone, { donationAmount: amount });
   db.clearConversation(phone);
-  return `Here's your secure payment link:\n🔗 ${link}\n\nThank you for your generosity! 🙏\n\n` + confirmationMessage(event);
-}
-
-async function handleNewCard(phone, msg, contact, conv) {
-  // Placeholder — card entry happens via Stripe link, not SMS
-  db.clearConversation(phone);
-  return `Got it! Check your link to complete your donation. Thank you! 💛`;
+  return (
+    `Here's your secure payment link for $${amount}:\n🔗 ${link}\n\n` +
+    `Your card will be saved for future events — next time it's just one tap! 💛\n\n` +
+    confirmationMessage(event)
+  );
 }
 
 // ── HELPERS ───────────────────────────────────────────────
 
-function parseDollarAmount(str) {
-  const cleaned = str.replace(/[$,\s]/g, '');
-  const num = parseFloat(cleaned);
-  if (isNaN(num) || num <= 0 || num > 10000) return null;
-  return Math.round(num * 100) / 100; // round to cents
-}
-
 function confirmationMessage(event) {
-  if (!event) return `You're all set! See you soon. Chag Sameach! 🌸`;
-  return `✅ You're all set! See you at the ${event.name} on ${event.date} at ${event.time}. Chag Sameach! 🌸`;
+  if (!event) return `You're all set! See you soon. 🙏`;
+  return `You're all set! See you at ${event.name} on ${event.date} at ${event.time}. ${event.confirmationNote || 'Looking forward to it! 🙏'}`;
 }
 
 module.exports = { handleIncoming };
