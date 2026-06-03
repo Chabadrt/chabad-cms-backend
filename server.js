@@ -146,7 +146,16 @@ app.get('/rsvps/latest', (req, res) => {
   res.json({ event, rsvps });
 });
 
-// ── START ─────────────────────────────────────────────────
+// Keep-alive ping to prevent sleeping
+const https = require('https');
+setInterval(() => {
+  const url = process.env.APP_URL;
+  if (url) {
+    https.get(url).on('error', () => {});
+  }
+}, 4 * 60 * 1000);
+
+// ── START ──────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✡️  Chabad SMS System running on port ${PORT}`);
