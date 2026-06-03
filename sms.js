@@ -13,7 +13,7 @@ function parseYesNo(msg) {
   // Clear YES signals
   const yesWords = ['1', 'yes', 'yeah', 'yep', 'yup', 'sure', 'ok', 'okay', 
                     'definitely', 'absolutely', 'of course', 'will be there',
-                    'ill be there', "i'll be there", 'coming', 'i'll come',
+                    'ill be there', "i'll be there", 'coming', "i'll come",
                     'count me in', 'בע"ה', 'im in', "i'm in", 'iy"h',
                     'bezras hashem', "b'ezras hashem", 'iyh', 'be there'];
   
