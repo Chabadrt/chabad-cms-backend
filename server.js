@@ -152,4 +152,11 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`✡️  Chabad SMS System running on port ${PORT}`);
   console.log(`   Twilio number: ${process.env.TWILIO_PHONE_NUMBER}`);
   console.log(`   Admin phone:   ${process.env.ADMIN_PHONE}`);
+}).on('error', (err) => {
+  console.error('Server error:', err);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
 });
