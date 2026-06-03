@@ -171,7 +171,7 @@ async function startDonationFlow(phone, contact, event) {
     );
   } else {
     return (
-      `💛 Would you like to support this event?\n\n` +
+      `💛 Would you like to help sponsor the breakfast tomorrow?\n\n` +
       `${donationMenu}\nN — No thank you\n\n` +
       `Reply with a number or N to skip.`
     );
