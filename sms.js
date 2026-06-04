@@ -249,7 +249,7 @@ async function handleDonationAmount(phone, msg, contact, conv) {
 }
 
 async function sendPaymentLink(phone, amount, event, conv) {
-  const link = await createPaymentLink(amount, event?.name || 'Chabad Event');
+  const link = 'https://buy.stripe.com/aFa00j3Jcbj1bwhcPp53O00';
   db.saveRsvp(conv.eventId, phone, { donationAmount: amount });
   db.clearConversation(phone);
   return (
