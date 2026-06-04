@@ -1,6 +1,17 @@
 const db = require('./db');
 const { getSettings } = require('./settings');
 
+function getFirstName(contact) {
+  if (!contact?.name) return null;
+  return contact.name.split(' ')[0];
+}
+
+function personalize(template, contact) {
+  const first = getFirstName(contact);
+  if (!first) return template;
+  return template.replace(/\{first_name\}/gi, first);
+}
+
 function parseYesNo(msg) {
   const m = msg.toLowerCase().trim();
   const yesWords = ['1','yes','yeah','yep','yup','sure','ok','okay','definitely','absolutely','of course','coming','count me in','im in',"i'm in",'iyh',"iy\"h",'bezras hashem','be there',"i'll be there",'ill be there','will be there'];
@@ -45,20 +56,21 @@ async function handleIdle(phone, msg, contact, conv, s) {
     db.saveRsvp(event.id, phone, { name: contact?.name || 'Guest', status: 'yes' });
     if (event.askHeadcount) {
       db.saveConversation(phone, { step: 'await_headcount', eventId: event.id });
-      return `Wonderful! How many people will be joining you? (Please reply with just a number)`;
+      const first = getFirstName(contact);
+      return `Wonderful${first ? ', ' + first : ''}! How many people will be joining you? (Please reply with just a number)`;
     } else if (event.askDonation) {
       return await startDonationFlow(phone, contact, event, s);
     } else {
       db.clearConversation(phone);
-      return confirmationMessage(event, s);
+      return confirmationMessage(event, s, contact);
     }
   }
   if (answer === 'no') {
     db.saveRsvp(event.id, phone, { name: contact?.name || 'Guest', status: 'no' });
     db.clearConversation(phone);
-    return s.noReply;
+    return personalize(s.noReply, contact);
   }
-  return s.unrecognizedReply;
+  return personalize(s.unrecognizedReply, contact);
 }
 
 async function handleHeadcount(phone, msg, contact, conv, s) {
@@ -71,32 +83,30 @@ async function handleHeadcount(phone, msg, contact, conv, s) {
     return await startDonationFlow(phone, contact, event, s);
   }
   db.clearConversation(phone);
-  return confirmationMessage(event, s);
+  return confirmationMessage(event, s, contact);
 }
 
 async function startDonationFlow(phone, contact, event, s) {
   db.saveConversation(phone, { step: 'await_donation_decision', eventId: event.id });
-  return `${s.donationAsk}\n\n${s.donationAmounts}`;
+  return `${personalize(s.donationAsk, contact)}\n\n${s.donationAmounts}`;
 }
 
 async function handleDonationDecision(phone, msg, contact, conv, s) {
   const event = db.getEvent(conv.eventId);
   const amount = parseDonation(msg);
-  if (amount === 'skip') { db.clearConversation(phone); return confirmationMessage(event, s); }
+  if (amount === 'skip') { db.clearConversation(phone); return confirmationMessage(event, s, contact); }
   if (amount === null) return `Please reply with 1 ($5), 2 ($10), 3 ($18 Chai), or N to skip.`;
-
-  // Get the specific Stripe link for this amount
   const links = s.donationLinks || {};
-  const link = links[amount] || links[5] || Object.values(links)[0] || 'https://chabadrt.org/donate';
-
+  const link = links[amount] || links[5] || 'https://chabadrt.org/donate';
   db.saveRsvp(conv.eventId, phone, { donationAmount: amount });
   db.clearConversation(phone);
-  return `Here's your secure $${amount} payment link:\n🔗 ${link}\n\nYour card will be saved for future events — next time it's just one tap! 💛\n\n${confirmationMessage(event, s)}`;
+  return `${s.donationThankYou}\n🔗 ${link}\n\n${s.cardSavedNote}\n\n${confirmationMessage(event, s, contact)}`;
 }
 
-function confirmationMessage(event, s) {
-  if (!event) return `You're all set! See you soon. 🙏`;
-  return `You're all set! See you at ${event.name} ${event.date} @ ${event.time}. ${s.confirmationNote}`;
+function confirmationMessage(event, s, contact) {
+  const first = getFirstName(contact);
+  if (!event) return `You're all set${first ? ', ' + first : ''}! See you soon. 🙏`;
+  return `You're all set${first ? ', ' + first : ''}! See you at ${event.name} ${event.date} @ ${event.time}. ${s.confirmationNote}`;
 }
 
 module.exports = { handleIncoming };
