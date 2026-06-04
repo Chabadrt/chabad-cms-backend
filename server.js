@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const twilio = require('twilio');
 const path = require('path');
+const fs = require('fs');
 const { handleIncoming } = require('./sms');
 const { importContacts } = require('./import');
 const { getSettings, saveSettings } = require('./settings');
@@ -13,7 +14,10 @@ app.use(express.json());
 
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
+// ── HEALTH CHECK ──────────────────────────────────────────
 app.get('/', (req, res) => res.json({ status: 'ok', name: 'Chabad Rivertowns SMS System', time: new Date().toISOString() }));
+
+// ── DASHBOARD ─────────────────────────────────────────────
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
 // ── SETTINGS API ──────────────────────────────────────────
@@ -63,7 +67,7 @@ app.post('/blast', async (req, res) => {
   for (const phone of phones) {
     try {
       const contact = db.getContact(phone);
-      const firstName = contact?.name ? contact.name.split(" ")[0] : null;
+      const firstName = contact?.name ? contact.name.split(' ')[0] : null;
       const greeting = firstName ? `Hi ${firstName}! ` : `Hi! `;
       const msgBody = `${greeting}${baseMsg}${suffix}`;
       await twilioClient.messages.create({ body: msgBody, from: process.env.TWILIO_PHONE_NUMBER, to: phone });
@@ -79,23 +83,35 @@ app.post('/blast', async (req, res) => {
 
 // ── CONTACTS ──────────────────────────────────────────────
 app.get('/contacts', (req, res) => res.json(db.getAllContacts()));
+
 app.post('/contacts', (req, res) => {
   const { phone, name, lists } = req.body;
   if (!phone) return res.status(400).json({ error: 'Phone required' });
   res.json(db.saveContact(phone, { name, lists: lists || ['all'] }));
 });
+
 app.patch('/contacts/:phone', (req, res) => {
   const phone = decodeURIComponent(req.params.phone);
   const { lists } = req.body;
   if (!lists) return res.status(400).json({ error: 'lists required' });
-  const contact = db.saveContact(phone, { lists });
-  res.json(contact);
+  res.json(db.saveContact(phone, { lists }));
 });
+
 app.post('/contacts/import', (req, res) => {
   const { csv } = req.body;
   if (!csv) return res.status(400).json({ error: 'No CSV data' });
   try { res.json(importContacts(csv)); }
   catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── EVENTS ────────────────────────────────────────────────
+app.get('/events', (req, res) => {
+  const eventsFile = path.join(__dirname, 'data', 'events.json');
+  try {
+    const data = fs.existsSync(eventsFile) ? JSON.parse(fs.readFileSync(eventsFile, 'utf8')) : {};
+    const list = Object.values(data).sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
+    res.json(list);
+  } catch { res.json([]); }
 });
 
 // ── RSVPs ─────────────────────────────────────────────────
@@ -104,31 +120,15 @@ app.get('/rsvps/latest', (req, res) => {
   if (!event) return res.json({ event: null, rsvps: [] });
   res.json({ event, rsvps: db.getRsvpsForEvent(event.id) });
 });
+
 app.get('/rsvps/:eventId', (req, res) => res.json(db.getRsvpsForEvent(req.params.eventId)));
-app.get('/events', (req, res) => {
-  const fs = require('fs');
-  const path = require('path');
-  const eventsFile = path.join(__dirname, 'data', 'events.json');
-  try {
-    const data = fs.existsSync(eventsFile) ? JSON.parse(fs.readFileSync(eventsFile, 'utf8')) : {};
-    const list = Object.values(data).sort((a,b) => new Date(b.sentAt) - new Date(a.sentAt));
-    res.json(list);
-  } catch { res.json([]); }
-});
-  // Load all events from file
-  const fs = require('fs');
-  const path = require('path');
-  const eventsFile = path.join(__dirname, 'data', 'events.json');
-  try {
-    const data = fs.existsSync(eventsFile) ? JSON.parse(fs.readFileSync(eventsFile, 'utf8')) : {};
-    const list = Object.values(data).sort((a,b) => new Date(b.sentAt) - new Date(a.sentAt));
-    res.json(list);
-  } catch { res.json([]); }
-});
 
 // ── KEEP ALIVE ────────────────────────────────────────────
 const https = require('https');
-setInterval(() => { const url = process.env.APP_URL; if (url) https.get(url).on('error', () => {}); }, 4 * 60 * 1000);
+setInterval(() => {
+  const url = process.env.APP_URL;
+  if (url) https.get(url).on('error', () => {});
+}, 4 * 60 * 1000);
 
 // ── START ─────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
