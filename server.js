@@ -57,7 +57,10 @@ app.post('/blast', async (req, res) => {
   const s = getSettings();
   const eventId = `evt_${Date.now()}`;
   db.saveEvent({ id: eventId, ...event, sentAt: new Date().toISOString(), sentTo: phones.length });
-  let msgBody = `${s.botIntro}\n\nWill you be joining us for ${event.name} ${event.date} @ ${event.time}?`;
+  const contact = db.getContact(phone);
+    const firstName = contact?.name ? contact.name.split(" ")[0] : null;
+    const greeting = firstName ? `Hi ${firstName}! ` : `Hi! `;
+    let msgBody = `${greeting}${s.botIntro}\n\nWill you be joining us for ${event.name} ${event.date} @ ${event.time}?`;
   if (event.customMessage) msgBody += `\n\n${event.customMessage}`;
   msgBody += `\n\n${s.rsvpPrompt}`;
   let sent = 0, failed = 0;
