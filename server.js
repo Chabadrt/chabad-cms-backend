@@ -106,7 +106,15 @@ app.get('/rsvps/latest', (req, res) => {
 });
 app.get('/rsvps/:eventId', (req, res) => res.json(db.getRsvpsForEvent(req.params.eventId)));
 app.get('/events', (req, res) => {
-  const events = Object.values(require('./db').loadFile ? [] : []);
+  const fs = require('fs');
+  const path = require('path');
+  const eventsFile = path.join(__dirname, 'data', 'events.json');
+  try {
+    const data = fs.existsSync(eventsFile) ? JSON.parse(fs.readFileSync(eventsFile, 'utf8')) : {};
+    const list = Object.values(data).sort((a,b) => new Date(b.sentAt) - new Date(a.sentAt));
+    res.json(list);
+  } catch { res.json([]); }
+});
   // Load all events from file
   const fs = require('fs');
   const path = require('path');
