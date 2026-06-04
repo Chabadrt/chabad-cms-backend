@@ -249,7 +249,10 @@ async function handleDonationAmount(phone, msg, contact, conv) {
 }
 
 async function sendPaymentLink(phone, amount, event, conv) {
-  const link = 'https://buy.stripe.com/aFa00j3Jcbj1bwhcPp53O00';
+  const link = amount === 5 ? 'https://buy.stripe.com/aFa00j3Jcbj1bwhcPp53O00' :
+             amount === 10 ? 'https://buy.stripe.com/00w00j5Rk0En57TbLl53O01' :
+             amount === 18 ? 'https://buy.stripe.com/6oU9AT6Vobj17g14iT53O02' :
+             'https://buy.stripe.com/aFa00j3Jcbj1bwhcPp53O00';
   db.saveRsvp(conv.eventId, phone, { donationAmount: amount });
   db.clearConversation(phone);
   return (
