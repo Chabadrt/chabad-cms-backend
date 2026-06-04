@@ -67,8 +67,7 @@ app.post('/blast', async (req, res) => {
   db.saveEvent(fullEvent);
   let msgBody = `Hi! This is Rabbi Benjy's new texting bot 🤖\n(yes, the Rabbi has been having a little too much fun with AI lately 😄)\n\n`;
   msgBody += `Will you be joining us for ${event.name} ${event.date ? event.date : ''} @ ${event.time ? event.time : ''}?`;
-  msgBody += '.';
-  if (event.customMessage) msgBody += `\n\n${event.customMessage}`;
+    if (event.customMessage) msgBody += `\n\n${event.customMessage}`;
   msgBody += `\n\nPlease reply with just a number:\n1 — I'll be there 🙏\n2 — Can't make it this time`;
   let sent = 0, failed = 0;
   for (const phone of phones) {
