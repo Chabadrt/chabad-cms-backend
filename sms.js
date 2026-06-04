@@ -256,7 +256,7 @@ async function sendPaymentLink(phone, amount, event, conv) {
   db.saveRsvp(conv.eventId, phone, { donationAmount: amount });
   db.clearConversation(phone);
   return (
-    `Here's your secure payment link for $${amount}:\n🔗 ${link}\n\n` +
+    `Great! Thank you. Here's your secure payment link for $${amount}:\n🔗 ${link}\n\n` +
     `Your card will be saved for future events — next time it's just one tap! 💛\n\n` +
     confirmationMessage(event)
   );
