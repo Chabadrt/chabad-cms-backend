@@ -57,15 +57,15 @@ app.post('/blast', async (req, res) => {
   const s = getSettings();
   const eventId = `evt_${Date.now()}`;
   db.saveEvent({ id: eventId, ...event, sentAt: new Date().toISOString(), sentTo: phones.length });
-  const contact = db.getContact(phone);
-    const firstName = contact?.name ? contact.name.split(" ")[0] : null;
-    const greeting = firstName ? `Hi ${firstName}! ` : `Hi! `;
-    let msgBody = `${greeting}${s.botIntro}\n\nWill you be joining us for ${event.name} ${event.date} @ ${event.time}?`;
-  if (event.customMessage) msgBody += `\n\n${event.customMessage}`;
-  msgBody += `\n\n${s.rsvpPrompt}`;
+  const baseMsg = `${s.botIntro}\n\nWill you be joining us for ${event.name} ${event.date} @ ${event.time}?`;
+  const suffix = (event.customMessage ? `\n\n${event.customMessage}` : '') + `\n\n${s.rsvpPrompt}`;
   let sent = 0, failed = 0;
   for (const phone of phones) {
     try {
+      const contact = db.getContact(phone);
+      const firstName = contact?.name ? contact.name.split(" ")[0] : null;
+      const greeting = firstName ? `Hi ${firstName}! ` : `Hi! `;
+      const msgBody = `${greeting}${baseMsg}${suffix}`;
       await twilioClient.messages.create({ body: msgBody, from: process.env.TWILIO_PHONE_NUMBER, to: phone });
       sent++;
       await new Promise(r => setTimeout(r, 50));
