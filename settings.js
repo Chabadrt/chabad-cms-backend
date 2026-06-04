@@ -12,11 +12,13 @@ const DEFAULTS = {
   noReply: "No problem! We'll miss you. Hope to see you next time. 💛\n\nReply STOP to unsubscribe.",
   donationAsk: "💛 Would you like to make a donation to Chabad of the Rivertowns?",
   donationAmounts: "1 — $5\n2 — $10\n3 — $18 (Chai ✡️)\nN — No thank you",
+  donationThankYou: "Great! Thank you. Here's your secure payment link:",
   donationLinks: {
     5: "https://buy.stripe.com/aFa00j3Jcbj1bwhcPp53O00",
     10: "https://buy.stripe.com/00w00j5Rk0En57TbLl53O01",
     18: "https://buy.stripe.com/6oU9AT6Vobj17g14iT53O02"
   },
+  cardSavedNote: "Your card will be saved for future events — next time it's just one tap! 💛",
   confirmationNote: "Looking forward to seeing you! 🙏",
   unrecognizedReply: "To make sure I get your answer correctly, please reply with just:\n\n1 — Yes, I'll be there 🙏\n2 — Can't make it this time\n\n(This is an automated system — just the number works best! 🤖)",
   lists: [
