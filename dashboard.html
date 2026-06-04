@@ -116,7 +116,10 @@
       </div>
       <!-- List mode -->
       <div id="send-mode-list">
-        <div class="form-group"><label>Contact List</label><select id="send-list" onchange="loadContactCount()"></select></div>
+        <div class="form-group">
+          <label>Select Lists <span class="hint">(check one or more — duplicates removed automatically)</span></label>
+          <div id="list-checkboxes" style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:4px 0;"></div>
+        </div>
         <div id="contact-count" style="font-size:13px;color:var(--muted);margin-bottom:16px;">Loading...</div>
       </div>
       <!-- Individual mode -->
@@ -182,6 +185,8 @@
         <div class="form-group"><label>$10 Stripe Link</label><input type="text" id="s-link10" placeholder="https://buy.stripe.com/..."></div>
         <div class="form-group"><label>$18 Stripe Link</label><input type="text" id="s-link18" placeholder="https://buy.stripe.com/..."></div>
       </div>
+      <div class="form-group"><label>Donation Thank You Message <span class="hint">(shown when someone donates)</span></label><input type="text" id="s-donationThankYou"></div>
+      <div class="form-group"><label>Card Saved Note <span class="hint">(shown after payment link)</span></label><input type="text" id="s-cardSavedNote"></div>
       <div class="form-group"><label>Default Confirmation Note</label><input type="text" id="s-confirmationNote"></div>
       <div class="form-group"><label>Unrecognized Reply Message</label><textarea id="s-unrecognizedReply" rows="3"></textarea></div>
       <button class="btn btn-gold" onclick="saveSettings()">💾 Save All Settings</button>
@@ -245,9 +250,20 @@ function setSendMode(mode, el) {
 function getLists() { return currentSettings.lists || []; }
 
 function loadListDropdown() {
-  const sel = document.getElementById('send-list');
   const lists = getLists();
-  sel.innerHTML = lists.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+  const container = document.getElementById('list-checkboxes');
+  if (!container) return;
+  container.innerHTML = lists.map(l => `
+    <label style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;text-transform:none;letter-spacing:0;color:var(--cream);">
+      <input type="checkbox" value="${l.id}" class="list-checkbox" onchange="loadContactCount()" style="width:15px;height:15px;accent-color:var(--gold);cursor:pointer;">
+      ${l.name}
+      <span class="list-count-badge" id="lcount-${l.id}" style="font-size:11px;color:var(--muted);margin-left:auto;"></span>
+    </label>`).join('');
+  // Check "All Contacts" by default if nothing selected
+  const checkboxes = document.querySelectorAll('.list-checkbox');
+  if (checkboxes.length && ![...checkboxes].some(c => c.checked)) {
+    checkboxes[0].checked = true;
+  }
   loadContactCount();
 }
 
@@ -397,10 +413,31 @@ async function loadContactCount() {
     const res = await fetch('/contacts');
     const contacts = await res.json();
     allContacts = contacts;
-    const list = document.getElementById('send-list').value;
-    const filtered = list === 'all' ? contacts : contacts.filter(c => c.lists?.includes(list));
-    document.getElementById('contact-count').textContent = `${filtered.length} contact${filtered.length !== 1 ? 's' : ''} will receive this message`;
+    // Update per-list counts
+    getLists().forEach(l => {
+      const el = document.getElementById('lcount-' + l.id);
+      if (el) {
+        const n = l.id === 'all' ? contacts.length : contacts.filter(c => c.lists?.includes(l.id)).length;
+        el.textContent = n + ' contacts';
+      }
+    });
+    // Get selected lists
+    const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
+    const phones = getSelectedPhones(contacts, selected);
+    document.getElementById('contact-count').textContent = `${phones.length} unique contact${phones.length !== 1 ? 's' : ''} will receive this message`;
   } catch { document.getElementById('contact-count').textContent = 'Could not load count'; }
+}
+
+function getSelectedPhones(contacts, selectedLists) {
+  if (!selectedLists.length) return [];
+  const seen = new Set();
+  const phones = [];
+  for (const c of contacts) {
+    if (selectedLists.includes('all') || (c.lists || []).some(l => selectedLists.includes(l))) {
+      if (!seen.has(c.phone)) { seen.add(c.phone); phones.push(c.phone); }
+    }
+  }
+  return phones;
 }
 
 // ── BLAST ─────────────────────────────────────────────────
@@ -428,9 +465,10 @@ async function sendBlast() {
   const askHeadcount = document.getElementById('tog-headcount').classList.contains('on');
   let phones = [];
   if (sendMode === 'list') {
-    const list = document.getElementById('send-list').value;
+    const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
+    if (!selected.length) { notify('Please select at least one list.', true); btn.disabled=false; btn.innerHTML='📤 Send Blast Now'; return; }
     const contacts = await fetch('/contacts').then(r=>r.json());
-    phones = list === 'all' ? contacts.map(c=>c.phone) : contacts.filter(c=>c.lists?.includes(list)).map(c=>c.phone);
+    phones = getSelectedPhones(contacts, selected);
   } else {
     phones = [...document.querySelectorAll('#contact-selector input:checked')].map(c=>c.value);
   }
@@ -506,6 +544,8 @@ async function loadSettings() {
   document.getElementById('s-link5').value = links[5]||'';
   document.getElementById('s-link10').value = links[10]||'';
   document.getElementById('s-link18').value = links[18]||'';
+  document.getElementById('s-donationThankYou').value = currentSettings.donationThankYou||'';
+  document.getElementById('s-cardSavedNote').value = currentSettings.cardSavedNote||'';
   document.getElementById('s-confirmationNote').value = currentSettings.confirmationNote||'';
   document.getElementById('s-unrecognizedReply').value = currentSettings.unrecognizedReply||'';
   updatePreview();
@@ -530,7 +570,9 @@ async function saveSettings() {
       10: document.getElementById('s-link10').value,
       18: document.getElementById('s-link18').value
     },
-    confirmationNote: document.getElementById('s-confirmationNote').value,
+    donationThankYou: document.getElementById('s-donationThankYou').value,
+      cardSavedNote: document.getElementById('s-cardSavedNote').value,
+      confirmationNote: document.getElementById('s-confirmationNote').value,
     unrecognizedReply: document.getElementById('s-unrecognizedReply').value,
   };
   try {
