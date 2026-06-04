@@ -84,6 +84,13 @@ app.post('/contacts', (req, res) => {
   if (!phone) return res.status(400).json({ error: 'Phone required' });
   res.json(db.saveContact(phone, { name, lists: lists || ['all'] }));
 });
+app.patch('/contacts/:phone', (req, res) => {
+  const phone = decodeURIComponent(req.params.phone);
+  const { lists } = req.body;
+  if (!lists) return res.status(400).json({ error: 'lists required' });
+  const contact = db.saveContact(phone, { lists });
+  res.json(contact);
+});
 app.post('/contacts/import', (req, res) => {
   const { csv } = req.body;
   if (!csv) return res.status(400).json({ error: 'No CSV data' });
@@ -92,11 +99,23 @@ app.post('/contacts/import', (req, res) => {
 });
 
 // ── RSVPs ─────────────────────────────────────────────────
-app.get('/rsvps/:eventId', (req, res) => res.json(db.getRsvpsForEvent(req.params.eventId)));
 app.get('/rsvps/latest', (req, res) => {
   const event = db.getLatestEvent();
   if (!event) return res.json({ event: null, rsvps: [] });
   res.json({ event, rsvps: db.getRsvpsForEvent(event.id) });
+});
+app.get('/rsvps/:eventId', (req, res) => res.json(db.getRsvpsForEvent(req.params.eventId)));
+app.get('/events', (req, res) => {
+  const events = Object.values(require('./db').loadFile ? [] : []);
+  // Load all events from file
+  const fs = require('fs');
+  const path = require('path');
+  const eventsFile = path.join(__dirname, 'data', 'events.json');
+  try {
+    const data = fs.existsSync(eventsFile) ? JSON.parse(fs.readFileSync(eventsFile, 'utf8')) : {};
+    const list = Object.values(data).sort((a,b) => new Date(b.sentAt) - new Date(a.sentAt));
+    res.json(list);
+  } catch { res.json([]); }
 });
 
 // ── KEEP ALIVE ────────────────────────────────────────────
