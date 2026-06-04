@@ -140,14 +140,21 @@
 
   <!-- RSVPs TAB -->
   <div class="page" id="tab-rsvps">
+    <div class="card" style="padding:16px 20px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <label style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Event</label>
+        <select id="event-selector" onchange="loadRsvpsForEvent(this.value)" style="flex:1;max-width:400px;"></select>
+        <button class="btn btn-outline btn-sm" onclick="loadEvents()">🔄 Refresh</button>
+      </div>
+    </div>
     <div class="stat-row">
       <div class="stat"><div class="stat-num" id="stat-yes">—</div><div class="stat-label">Attending ✓</div></div>
       <div class="stat"><div class="stat-num" id="stat-no">—</div><div class="stat-label">Can't make it</div></div>
       <div class="stat"><div class="stat-num" id="stat-donations">—</div><div class="stat-label">Donations</div></div>
     </div>
     <div class="card">
-      <div class="card-title"><span>📋 Latest Event RSVPs</span><button class="btn btn-outline btn-sm" onclick="loadRsvps()">🔄 Refresh</button></div>
-      <div id="rsvp-table"><p style="color:var(--muted);font-size:14px;">Loading RSVPs...</p></div>
+      <div class="card-title"><span id="rsvp-title">📋 RSVPs</span></div>
+      <div id="rsvp-table"><p style="color:var(--muted);font-size:14px;">Select an event above...</p></div>
     </div>
   </div>
 
@@ -352,11 +359,40 @@ async function loadContacts() {
 
 function renderContactsTable(contacts) {
   if (!contacts.length) { document.getElementById('contacts-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No contacts yet.</p>'; return; }
+  const lists = getLists().filter(l => l.id !== 'all');
   let html = `<p style="font-size:13px;color:var(--muted);margin-bottom:10px;">${contacts.length} contact${contacts.length !== 1 ? 's' : ''}</p>`;
-  html += '<table><thead><tr><th>Name</th><th>Phone</th><th>List</th></tr></thead><tbody>';
-  for (const c of contacts) html += `<tr><td>${c.name||'—'}</td><td>${c.phone}</td><td>${(c.lists||[]).join(', ')}</td></tr>`;
+  html += '<table><thead><tr><th>Name</th><th>Phone</th><th>Lists</th><th>Edit</th></tr></thead><tbody>';
+  for (const c of contacts) {
+    const currentLists = (c.lists||[]).filter(l=>l!=='all').join(', ') || '—';
+    const phone = encodeURIComponent(c.phone);
+    const listOptions = lists.map(l => `<option value="${l.id}" ${(c.lists||[]).includes(l.id)?'selected':''}>${l.name}</option>`).join('');
+    html += `<tr>
+      <td>${c.name||'—'}</td>
+      <td style="font-size:12px;">${c.phone}</td>
+      <td style="font-size:12px;">${currentLists}</td>
+      <td>
+        <select id="list-sel-${phone}" style="padding:4px 8px;font-size:12px;width:auto;" multiple>
+          ${listOptions}
+        </select>
+        <button class="btn btn-outline btn-sm" style="padding:4px 10px;font-size:11px;margin-left:4px;" onclick="updateContactList('${phone}')">Save</button>
+      </td>
+    </tr>`;
+  }
   html += '</tbody></table>';
   document.getElementById('contacts-table').innerHTML = html;
+}
+
+async function updateContactList(encodedPhone) {
+  const sel = document.getElementById('list-sel-' + encodedPhone);
+  const selected = [...sel.selectedOptions].map(o => o.value);
+  if (!selected.length) { notify('Please select at least one list', true); return; }
+  try {
+    const phone = decodeURIComponent(encodedPhone);
+    await fetch('/contacts/' + encodedPhone, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ lists: selected }) });
+    notify('✅ Contact updated!');
+    loadContacts();
+    loadContactCount();
+  } catch { notify('Could not update contact', true); }
 }
 
 function filterContactsTable() {
