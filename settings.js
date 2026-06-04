@@ -1,6 +1,3 @@
-// settings.js — Manages editable message settings
-// Saves to a JSON file so changes persist across restarts
-
 const fs = require('fs');
 const path = require('path');
 
@@ -15,9 +12,20 @@ const DEFAULTS = {
   noReply: "No problem! We'll miss you. Hope to see you next time. 💛\n\nReply STOP to unsubscribe.",
   donationAsk: "💛 Would you like to make a donation to Chabad of the Rivertowns?",
   donationAmounts: "1 — $5\n2 — $10\n3 — $18 (Chai ✡️)\nN — No thank you",
-  donationLink: "https://buy.stripe.com/aFa00j3Jcbj1bwhcPp53O00",
+  donationLinks: {
+    5: "https://buy.stripe.com/aFa00j3Jcbj1bwhcPp53O00",
+    10: "https://buy.stripe.com/00w00j5Rk0En57TbLl53O01",
+    18: "https://buy.stripe.com/6oU9AT6Vobj17g14iT53O02"
+  },
   confirmationNote: "Looking forward to seeing you! 🙏",
   unrecognizedReply: "To make sure I get your answer correctly, please reply with just:\n\n1 — Yes, I'll be there 🙏\n2 — Can't make it this time\n\n(This is an automated system — just the number works best! 🤖)",
+  lists: [
+    { id: "all", name: "All Contacts" },
+    { id: "minyan", name: "Minyan" },
+    { id: "women", name: "Women's List" },
+    { id: "cyp", name: "CYP Young Professionals" },
+    { id: "test", name: "Test" }
+  ]
 };
 
 function getSettings() {
@@ -25,9 +33,7 @@ function getSettings() {
     if (!fs.existsSync(SETTINGS_FILE)) return { ...DEFAULTS };
     const saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
     return { ...DEFAULTS, ...saved };
-  } catch {
-    return { ...DEFAULTS };
-  }
+  } catch { return { ...DEFAULTS }; }
 }
 
 function saveSettings(updates) {
