@@ -3,104 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chabad Rivertowns — Event SMS Dashboard</title>
+<title>Chabad Rivertowns — SMS Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --gold: #C9A84C;
-    --gold-light: #E8C97A;
-    --navy: #0f1b2d;
-    --navy-mid: #1a2d45;
-    --navy-light: #243a57;
-    --cream: #f9f4ec;
-    --muted: #6b7280;
-    --success: #2d7a4f;
-    --radius: 12px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--navy); color: var(--cream); min-height: 100vh; }
-
-  .header {
-    background: var(--navy-mid); border-bottom: 1px solid rgba(201,168,76,0.2);
-    padding: 20px 32px; display: flex; align-items: center; gap: 16px;
-  }
-  .header-logo { font-size: 28px; }
-  .header-title { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--gold); }
-  .header-sub { font-size: 12px; color: var(--muted); }
-
-  .tabs { display: flex; background: var(--navy-mid); border-bottom: 1px solid rgba(201,168,76,0.15); padding: 0 32px; }
-  .tab { padding: 14px 20px; font-size: 14px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; transition: all 0.18s; }
-  .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
-  .tab:hover { color: var(--cream); }
-
-  .content { padding: 32px; max-width: 800px; margin: 0 auto; }
-  .page { display: none; }
-  .page.active { display: block; }
-
-  .card { background: var(--navy-mid); border: 1px solid rgba(201,168,76,0.15); border-radius: var(--radius); padding: 28px; margin-bottom: 24px; }
-  .card-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--gold-light); margin-bottom: 20px; }
-
-  .form-group { margin-bottom: 18px; }
-  label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
-  input, textarea, select {
-    width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(201,168,76,0.2);
-    border-radius: 8px; padding: 11px 14px; font-family: 'DM Sans', sans-serif;
-    font-size: 14px; color: var(--cream); outline: none; transition: border 0.18s;
-  }
-  input:focus, textarea:focus, select:focus { border-color: var(--gold); }
-  input::placeholder, textarea::placeholder { color: rgba(249,244,236,0.25); }
-  select option { background: var(--navy-mid); }
-  textarea { resize: vertical; min-height: 80px; }
-
-  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-  .toggle-row:last-child { border-bottom: none; }
-  .toggle-label { font-size: 14px; }
-  .toggle-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .toggle { width: 40px; height: 22px; background: rgba(255,255,255,0.1); border-radius: 11px; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; }
-  .toggle.on { background: var(--gold); }
-  .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: transform 0.2s; }
-  .toggle.on::after { transform: translateX(18px); }
-
-  .btn { padding: 12px 24px; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; border: none; transition: all 0.18s; display: inline-flex; align-items: center; gap: 8px; }
-  .btn-gold { background: var(--gold); color: var(--navy); }
-  .btn-gold:hover { background: var(--gold-light); }
-  .btn-outline { background: transparent; color: var(--gold); border: 1px solid rgba(201,168,76,0.4); }
-  .btn-outline:hover { background: rgba(201,168,76,0.1); }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .preview-box { background: rgba(0,0,0,0.2); border: 1px solid rgba(201,168,76,0.15); border-radius: 10px; padding: 16px; font-size: 13px; line-height: 1.6; color: rgba(249,244,236,0.8); margin-top: 16px; white-space: pre-wrap; }
-
-  .notif { position: fixed; bottom: 24px; right: 24px; background: var(--navy-mid); border: 1px solid var(--gold); border-radius: 10px; padding: 14px 20px; font-size: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.4); transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 999; max-width: 360px; }
-  .notif.show { transform: translateY(0); opacity: 1; }
-  .notif.error { border-color: #e74c3c; }
-
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border-bottom: 1px solid rgba(201,168,76,0.15); }
-  td { padding: 11px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
-  tr:hover td { background: rgba(201,168,76,0.04); }
-
-  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 500; }
-  .badge-yes { background: rgba(45,122,79,0.2); color: #4ade80; }
-  .badge-no { background: rgba(192,57,43,0.15); color: #f87171; }
-  .badge-pending { background: rgba(201,168,76,0.15); color: var(--gold); }
-
-  .upload-area { border: 2px dashed rgba(201,168,76,0.3); border-radius: 10px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.2s; }
-  .upload-area:hover, .upload-area.drag { border-color: var(--gold); background: rgba(201,168,76,0.05); }
-  .upload-area .icon { font-size: 36px; margin-bottom: 10px; }
-  .upload-area p { font-size: 14px; color: var(--muted); }
-  .upload-area strong { color: var(--gold); }
-
-  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
-  .stat { background: var(--navy-mid); border: 1px solid rgba(201,168,76,0.15); border-radius: var(--radius); padding: 20px; }
-  .stat-num { font-family: 'Playfair Display', serif; font-size: 32px; color: var(--gold); }
-  .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
-
-  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  :root { --gold:#C9A84C; --gold-light:#E8C97A; --navy:#0f1b2d; --navy-mid:#1a2d45; --navy-light:#243a57; --cream:#f9f4ec; --muted:#6b7280; --radius:12px; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'DM Sans',sans-serif; background:var(--navy); color:var(--cream); min-height:100vh; }
+  .header { background:var(--navy-mid); border-bottom:1px solid rgba(201,168,76,0.2); padding:20px 32px; display:flex; align-items:center; gap:16px; }
+  .header-logo { font-size:28px; }
+  .header-title { font-family:'Playfair Display',serif; font-size:22px; color:var(--gold); }
+  .header-sub { font-size:12px; color:var(--muted); }
+  .tabs { display:flex; background:var(--navy-mid); border-bottom:1px solid rgba(201,168,76,0.15); padding:0 32px; overflow-x:auto; }
+  .tab { padding:14px 20px; font-size:14px; cursor:pointer; color:var(--muted); border-bottom:2px solid transparent; transition:all 0.18s; white-space:nowrap; }
+  .tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+  .tab:hover { color:var(--cream); }
+  .content { padding:32px; max-width:800px; margin:0 auto; }
+  .page { display:none; }
+  .page.active { display:block; }
+  .card { background:var(--navy-mid); border:1px solid rgba(201,168,76,0.15); border-radius:var(--radius); padding:28px; margin-bottom:24px; }
+  .card-title { font-family:'Playfair Display',serif; font-size:18px; color:var(--gold-light); margin-bottom:20px; }
+  .form-group { margin-bottom:18px; }
+  label { display:block; font-size:12px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+  label .hint { font-size:11px; color:var(--muted); text-transform:none; letter-spacing:0; margin-left:6px; font-weight:400; }
+  input, textarea, select { width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(201,168,76,0.2); border-radius:8px; padding:11px 14px; font-family:'DM Sans',sans-serif; font-size:14px; color:var(--cream); outline:none; transition:border 0.18s; }
+  input:focus, textarea:focus, select:focus { border-color:var(--gold); }
+  input::placeholder, textarea::placeholder { color:rgba(249,244,236,0.25); }
+  select option { background:var(--navy-mid); }
+  textarea { resize:vertical; min-height:70px; }
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+  .toggle-row:last-child { border-bottom:none; }
+  .toggle { width:40px; height:22px; background:rgba(255,255,255,0.1); border-radius:11px; cursor:pointer; position:relative; transition:background 0.2s; flex-shrink:0; }
+  .toggle.on { background:var(--gold); }
+  .toggle::after { content:''; position:absolute; top:3px; left:3px; width:16px; height:16px; background:white; border-radius:50%; transition:transform 0.2s; }
+  .toggle.on::after { transform:translateX(18px); }
+  .btn { padding:12px 24px; border-radius:8px; font-size:14px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; border:none; transition:all 0.18s; display:inline-flex; align-items:center; gap:8px; }
+  .btn-gold { background:var(--gold); color:var(--navy); }
+  .btn-gold:hover { background:var(--gold-light); }
+  .btn-outline { background:transparent; color:var(--gold); border:1px solid rgba(201,168,76,0.4); }
+  .btn-outline:hover { background:rgba(201,168,76,0.1); }
+  .btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .btn-sm { padding:8px 16px; font-size:13px; }
+  .preview-box { background:rgba(0,0,0,0.2); border:1px solid rgba(201,168,76,0.15); border-radius:10px; padding:16px; font-size:13px; line-height:1.7; color:rgba(249,244,236,0.85); margin-top:16px; white-space:pre-wrap; }
+  .notif { position:fixed; bottom:24px; right:24px; background:var(--navy-mid); border:1px solid var(--gold); border-radius:10px; padding:14px 20px; font-size:14px; box-shadow:0 8px 30px rgba(0,0,0,0.4); transform:translateY(80px); opacity:0; transition:all 0.3s; z-index:999; max-width:360px; }
+  .notif.show { transform:translateY(0); opacity:1; }
+  .notif.error { border-color:#e74c3c; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; padding:10px 12px; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); border-bottom:1px solid rgba(201,168,76,0.15); }
+  td { padding:11px 12px; border-bottom:1px solid rgba(255,255,255,0.04); }
+  tr:hover td { background:rgba(201,168,76,0.04); }
+  .badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:11.5px; font-weight:500; }
+  .badge-yes { background:rgba(45,122,79,0.2); color:#4ade80; }
+  .badge-no { background:rgba(192,57,43,0.15); color:#f87171; }
+  .upload-area { border:2px dashed rgba(201,168,76,0.3); border-radius:10px; padding:32px; text-align:center; cursor:pointer; transition:all 0.2s; }
+  .upload-area:hover { border-color:var(--gold); background:rgba(201,168,76,0.05); }
+  .upload-area .icon { font-size:36px; margin-bottom:10px; }
+  .upload-area p { font-size:14px; color:var(--muted); }
+  .stat-row { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px; }
+  .stat { background:var(--navy-mid); border:1px solid rgba(201,168,76,0.15); border-radius:var(--radius); padding:20px; }
+  .stat-num { font-family:'Playfair Display',serif; font-size:32px; color:var(--gold); }
+  .stat-label { font-size:12px; color:var(--muted); margin-top:4px; }
+  .spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,0.3); border-top-color:white; border-radius:50%; animation:spin 0.8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .saved-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(45,122,79,0.2); color:#4ade80; padding:4px 12px; border-radius:20px; font-size:12px; opacity:0; transition:opacity 0.3s; }
+  .saved-badge.show { opacity:1; }
 </style>
 </head>
 <body>
-
 <div class="header">
   <div class="header-logo">✡️</div>
   <div>
@@ -108,13 +77,12 @@
     <div class="header-sub">Event SMS Dashboard</div>
   </div>
 </div>
-
 <div class="tabs">
-  <div class="tab active" onclick="showTab('blast')">📤 Send Blast</div>
-  <div class="tab" onclick="showTab('rsvps')">📋 RSVPs</div>
-  <div class="tab" onclick="showTab('contacts')">👥 Contacts</div>
+  <div class="tab active" onclick="showTab('blast',this)">📤 Send Blast</div>
+  <div class="tab" onclick="showTab('rsvps',this)">📋 RSVPs</div>
+  <div class="tab" onclick="showTab('contacts',this)">👥 Contacts</div>
+  <div class="tab" onclick="showTab('settings',this)">✏️ Message Settings</div>
 </div>
-
 <div class="content">
 
   <!-- BLAST TAB -->
@@ -125,10 +93,10 @@
         <label>Event Name</label>
         <input type="text" id="evt-name" placeholder="Minyan" oninput="updatePreview()">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div class="two-col">
         <div class="form-group">
           <label>Date</label>
-          <input type="text" id="evt-date" placeholder="Wednesday, June 4th" oninput="updatePreview()">
+          <input type="text" id="evt-date" placeholder="tomorrow" oninput="updatePreview()">
         </div>
         <div class="form-group">
           <label>Time</label>
@@ -136,59 +104,49 @@
         </div>
       </div>
       <div class="form-group">
-        <label>Location</label>
-        <input type="text" id="evt-location" placeholder="303 Broadway, Dobbs Ferry" oninput="updatePreview()">
-      </div>
-      <div class="form-group">
-        <label>Custom Message (optional)</label>
+        <label>Custom Message <span class="hint">(optional — appears after event line)</span></label>
         <textarea id="evt-msg" placeholder="e.g. Breakfast sponsored by the Goldstein family!" oninput="updatePreview()"></textarea>
       </div>
       <div class="form-group">
-        <label>Confirmation Note (optional)</label>
+        <label>Confirmation Note <span class="hint">(sent after RSVP is complete)</span></label>
         <input type="text" id="evt-confirm" placeholder="Looking forward to seeing you! 🙏" oninput="updatePreview()">
       </div>
     </div>
-
     <div class="card">
       <div class="card-title">⚙️ Options</div>
       <div class="toggle-row">
-        <div><div class="toggle-label">Ask for donation</div><div class="toggle-desc">Offer $5, $10, or $18 (Chai) after RSVP</div></div>
+        <div><div style="font-size:14px;">Ask for donation</div><div style="font-size:12px;color:var(--muted);">Offer $5, $10, or $18 (Chai) after RSVP</div></div>
         <div class="toggle on" id="tog-donation" onclick="this.classList.toggle('on')"></div>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">Ask headcount</div><div class="toggle-desc">How many people are joining?</div></div>
+        <div><div style="font-size:14px;">Ask headcount</div><div style="font-size:12px;color:var(--muted);">How many people are joining?</div></div>
         <div class="toggle" id="tog-headcount" onclick="this.classList.toggle('on')"></div>
       </div>
-      <div class="toggle-row">
-        <div><div class="toggle-label">Use card on file for returning donors</div><div class="toggle-desc">One-tap payment for returning guests</div></div>
-        <div class="toggle on" id="tog-card" onclick="this.classList.toggle('on')"></div>
-      </div>
     </div>
-
     <div class="card">
       <div class="card-title">📱 Message Preview</div>
-      <div id="preview" class="preview-box">Fill in event details above to see preview...</div>
+      <div id="preview" class="preview-box">Fill in event details above...</div>
     </div>
-
     <div class="card">
       <div class="card-title">📤 Send To</div>
       <div class="form-group">
         <label>Contact List</label>
-        <select id="send-list">
+        <select id="send-list" onchange="loadContactCount()">
           <option value="all">All contacts</option>
           <option value="minyan">Minyan list</option>
           <option value="women">Women's list</option>
           <option value="cyp">CYP young professionals</option>
+          <option value="test">Test (single contact)</option>
         </select>
       </div>
-      <div id="contact-count" style="font-size:13px;color:var(--muted);margin-bottom:16px;">Loading contacts...</div>
+      <div id="contact-count" style="font-size:13px;color:var(--muted);margin-bottom:16px;">Loading...</div>
       <button class="btn btn-gold" onclick="sendBlast()" id="send-btn">📤 Send Blast Now</button>
     </div>
   </div>
 
   <!-- RSVPs TAB -->
   <div class="page" id="tab-rsvps">
-    <div class="stat-row" id="rsvp-stats">
+    <div class="stat-row">
       <div class="stat"><div class="stat-num" id="stat-yes">—</div><div class="stat-label">Attending ✓</div></div>
       <div class="stat"><div class="stat-num" id="stat-no">—</div><div class="stat-label">Can't make it</div></div>
       <div class="stat"><div class="stat-num" id="stat-donations">—</div><div class="stat-label">Donations</div></div>
@@ -196,7 +154,7 @@
     <div class="card">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
         <span>📋 Latest Event RSVPs</span>
-        <button class="btn btn-outline" style="padding:7px 14px;font-size:12px;" onclick="loadRsvps()">🔄 Refresh</button>
+        <button class="btn btn-outline btn-sm" onclick="loadRsvps()">🔄 Refresh</button>
       </div>
       <div id="rsvp-table"><p style="color:var(--muted);font-size:14px;">Loading RSVPs...</p></div>
     </div>
@@ -205,43 +163,87 @@
   <!-- CONTACTS TAB -->
   <div class="page" id="tab-contacts">
     <div class="card">
-      <div class="card-title">⬆️ Import Contacts from CSV</div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Your CSV should have columns for name (or first_name + last_name), phone, and optionally list (e.g. "minyan").</p>
-      <div class="upload-area" id="upload-area" onclick="document.getElementById('csv-input').click()" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+      <div class="card-title">⬆️ Import from CSV</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Columns: <strong>first</strong>, <strong>last</strong> (or <strong>name</strong>), <strong>phone</strong>, <strong>list</strong> (e.g. minyan, women, cyp, test)</p>
+      <div class="upload-area" onclick="document.getElementById('csv-input').click()" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
         <div class="icon">📂</div>
-        <p><strong>Click to upload</strong> or drag and drop your CSV file here</p>
-        <p style="margin-top:6px;font-size:12px;">Accepted columns: name, first_name, last_name, phone, cell, mobile, list</p>
+        <p><strong>Click to upload</strong> or drag and drop your CSV</p>
       </div>
       <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleFileSelect(event)">
       <div id="import-result" style="margin-top:16px;"></div>
     </div>
-
     <div class="card">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
         <span>👥 All Contacts</span>
-        <button class="btn btn-outline" style="padding:7px 14px;font-size:12px;" onclick="loadContacts()">🔄 Refresh</button>
+        <button class="btn btn-outline btn-sm" onclick="loadContacts()">🔄 Refresh</button>
       </div>
-      <div id="contacts-table"><p style="color:var(--muted);font-size:14px;">Loading contacts...</p></div>
+      <div id="contacts-table"><p style="color:var(--muted);font-size:14px;">Loading...</p></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div class="page" id="tab-settings">
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>✏️ Message Settings</span>
+        <span class="saved-badge" id="saved-badge">✅ Saved!</span>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:24px;">Edit any message the bot sends. Changes take effect immediately — no code needed.</p>
+
+      <div class="form-group">
+        <label>Bot Introduction <span class="hint">(opening line of every blast)</span></label>
+        <textarea id="s-botIntro" rows="3"></textarea>
+      </div>
+      <div class="form-group">
+        <label>RSVP Prompt <span class="hint">(appears after event details)</span></label>
+        <textarea id="s-rsvpPrompt" rows="3"></textarea>
+      </div>
+      <div class="form-group">
+        <label>No Reply Message <span class="hint">(when someone replies 2 / No)</span></label>
+        <textarea id="s-noReply" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Donation Ask Message <span class="hint">(shown after yes RSVP)</span></label>
+        <textarea id="s-donationAsk" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Donation Options <span class="hint">(the menu guests see)</span></label>
+        <textarea id="s-donationAmounts" rows="4"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Stripe Donation Link</label>
+        <input type="text" id="s-donationLink" placeholder="https://buy.stripe.com/...">
+      </div>
+      <div class="form-group">
+        <label>Default Confirmation Note <span class="hint">(after RSVP is complete)</span></label>
+        <input type="text" id="s-confirmationNote">
+      </div>
+      <div class="form-group">
+        <label>Unrecognized Reply Message <span class="hint">(when someone texts something unexpected)</span></label>
+        <textarea id="s-unrecognizedReply" rows="3"></textarea>
+      </div>
+
+      <button class="btn btn-gold" onclick="saveSettings()">💾 Save All Settings</button>
     </div>
   </div>
 
 </div>
-
 <div class="notif" id="notif"><span id="notif-msg"></span></div>
 
 <script>
-const API = ''; // Same origin — Railway serves both dashboard and API
+let currentSettings = {};
 
-function showTab(name) {
+function showTab(name, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
-  event.target.classList.add('active');
+  el.classList.add('active');
   if (name === 'rsvps') loadRsvps();
   if (name === 'contacts') loadContacts();
+  if (name === 'settings') loadSettings();
 }
 
-function notify(msg, isError = false) {
+function notify(msg, isError=false) {
   const n = document.getElementById('notif');
   document.getElementById('notif-msg').textContent = msg;
   n.className = 'notif show' + (isError ? ' error' : '');
@@ -252,12 +254,12 @@ function updatePreview() {
   const name = document.getElementById('evt-name').value || '[Event Name]';
   const date = document.getElementById('evt-date').value || '[Date]';
   const time = document.getElementById('evt-time').value || '[Time]';
-  const loc = document.getElementById('evt-location').value || '';
   const msg = document.getElementById('evt-msg').value;
-  let preview = `Hi! This is Rabbi Benjy's new texting bot 🤖\n(yes, the Rabbi has been having a little too much fun with AI lately 😄)\n\n`;
-  preview += `Will you be joining us for ${name} ${date} @ ${time}?`;
+  const intro = currentSettings.botIntro || "Hi! This is Rabbi Benjy's new texting bot 🤖\n(yes, the Rabbi has been having a little too much fun with AI lately 😄)";
+  const prompt = currentSettings.rsvpPrompt || "Please reply with just a number:\n1 — I'll be there 🙏\n2 — Can't make it this time";
+  let preview = `${intro}\n\nWill you be joining us for ${name} ${date} @ ${time}?`;
   if (msg) preview += `\n\n${msg}`;
-  preview += `\n\nPlease reply with just a number:\n1 — I'll be there 🙏\n2 — Can't make it this time`;
+  preview += `\n\n${prompt}`;
   document.getElementById('preview').textContent = preview;
 }
 
@@ -267,167 +269,126 @@ async function loadContactCount() {
     const contacts = await res.json();
     const list = document.getElementById('send-list').value;
     const filtered = list === 'all' ? contacts : contacts.filter(c => c.lists?.includes(list));
-    document.getElementById('contact-count').textContent = `${filtered.length} contacts will receive this message`;
-  } catch {
-    document.getElementById('contact-count').textContent = 'Could not load contact count';
-  }
+    document.getElementById('contact-count').textContent = `${filtered.length} contact${filtered.length !== 1 ? 's' : ''} will receive this message`;
+  } catch { document.getElementById('contact-count').textContent = 'Could not load count'; }
 }
-
-document.getElementById('send-list').addEventListener('change', loadContactCount);
 
 async function sendBlast() {
   const name = document.getElementById('evt-name').value;
   const date = document.getElementById('evt-date').value;
   const time = document.getElementById('evt-time').value;
-  const location = document.getElementById('evt-location').value;
+  if (!name || !date || !time) { notify('Please fill in event name, date, and time', true); return; }
   const customMessage = document.getElementById('evt-msg').value;
   const confirmationNote = document.getElementById('evt-confirm').value;
-
-  if (!name || !date || !time) {
-    notify('Please fill in event name, date, and time', true);
-    return;
-  }
-
   const askDonation = document.getElementById('tog-donation').classList.contains('on');
   const askHeadcount = document.getElementById('tog-headcount').classList.contains('on');
   const list = document.getElementById('send-list').value;
-
-  // Get phones
   let contacts = [];
-  try {
-    const res = await fetch('/contacts');
-    contacts = await res.json();
-  } catch {
-    notify('Could not load contacts', true);
-    return;
-  }
-
-  const phones = list === 'all'
-    ? contacts.map(c => c.phone)
-    : contacts.filter(c => c.lists?.includes(list)).map(c => c.phone);
-
-  if (!phones.length) {
-    notify('No contacts found for this list. Please import contacts first.', true);
-    return;
-  }
-
+  try { const r = await fetch('/contacts'); contacts = await r.json(); } catch { notify('Could not load contacts', true); return; }
+  const phones = list === 'all' ? contacts.map(c => c.phone) : contacts.filter(c => c.lists?.includes(list)).map(c => c.phone);
+  if (!phones.length) { notify('No contacts found for this list. Please import contacts first.', true); return; }
   const btn = document.getElementById('send-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Sending...';
-
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending...';
   try {
-    const res = await fetch('/blast', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        event: { name, date, time, location, customMessage, confirmationNote, askDonation, askHeadcount, donationAmounts: [5, 10, 18] },
-        phones
-      })
-    });
+    const res = await fetch('/blast', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ event:{name,date,time,customMessage,confirmationNote,askDonation,askHeadcount}, phones }) });
     const data = await res.json();
-    notify(`✅ Blast sent to ${data.sent} contacts! ${data.failed > 0 ? `(${data.failed} failed)` : ''}`);
-  } catch (err) {
-    notify('Error sending blast: ' + err.message, true);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '📤 Send Blast Now';
-  }
+    notify(`✅ Sent to ${data.sent} contact${data.sent !== 1 ? 's' : ''}!${data.failed > 0 ? ` (${data.failed} failed)` : ''}`);
+  } catch (err) { notify('Error: ' + err.message, true); }
+  finally { btn.disabled=false; btn.innerHTML='📤 Send Blast Now'; }
 }
 
 async function loadRsvps() {
   try {
     const res = await fetch('/rsvps/latest');
     const data = await res.json();
-    if (!data.rsvps || !data.rsvps.length) {
-      document.getElementById('rsvp-table').innerHTML = '<p style="color:var(--muted);font-size:14px;padding:16px 0;">No RSVPs yet for the latest event.</p>';
-      return;
-    }
-    const yes = data.rsvps.filter(r => r.status === 'yes').length;
-    const no = data.rsvps.filter(r => r.status === 'no').length;
-    const donations = data.rsvps.filter(r => r.donationAmount).reduce((sum, r) => sum + (r.donationAmount || 0), 0);
+    if (!data.rsvps?.length) { document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No RSVPs yet.</p>'; return; }
+    const yes = data.rsvps.filter(r=>r.status==='yes').length;
+    const no = data.rsvps.filter(r=>r.status==='no').length;
+    const donations = data.rsvps.reduce((s,r)=>s+(r.donationAmount||0),0);
     document.getElementById('stat-yes').textContent = yes;
     document.getElementById('stat-no').textContent = no;
     document.getElementById('stat-donations').textContent = donations ? `$${donations}` : '$0';
-
     let html = '<table><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th><th>Donation</th></tr></thead><tbody>';
     for (const r of data.rsvps) {
-      const badge = r.status === 'yes' ? 'badge-yes' : r.status === 'no' ? 'badge-no' : 'badge-pending';
-      const statusLabel = r.status === 'yes' ? '✓ Yes' : r.status === 'no' ? '✗ No' : '⏳ Pending';
-      html += `<tr>
-        <td>${r.name || '—'}</td>
-        <td>${r.phone}</td>
-        <td><span class="badge ${badge}">${statusLabel}</span></td>
-        <td>${r.guestCount || '—'}</td>
-        <td>${r.donationAmount ? '$' + r.donationAmount : '—'}</td>
-      </tr>`;
+      const badge = r.status==='yes'?'badge-yes':r.status==='no'?'badge-no':'';
+      const label = r.status==='yes'?'✓ Yes':r.status==='no'?'✗ No':'⏳';
+      html += `<tr><td>${r.name||'—'}</td><td>${r.phone}</td><td><span class="badge ${badge}">${label}</span></td><td>${r.guestCount||'—'}</td><td>${r.donationAmount?'$'+r.donationAmount:'—'}</td></tr>`;
     }
     html += '</tbody></table>';
     document.getElementById('rsvp-table').innerHTML = html;
-  } catch {
-    document.getElementById('rsvp-table').innerHTML = '<p style="color:#f87171;">Could not load RSVPs.</p>';
-  }
+  } catch { document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load RSVPs.</p>'; }
 }
 
 async function loadContacts() {
   try {
     const res = await fetch('/contacts');
     const contacts = await res.json();
-    if (!contacts.length) {
-      document.getElementById('contacts-table').innerHTML = '<p style="color:var(--muted);font-size:14px;padding:16px 0;">No contacts yet. Import a CSV to get started.</p>';
-      return;
-    }
+    if (!contacts.length) { document.getElementById('contacts-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No contacts yet.</p>'; return; }
     let html = `<p style="font-size:13px;color:var(--muted);margin-bottom:12px;">${contacts.length} total contacts</p>`;
     html += '<table><thead><tr><th>Name</th><th>Phone</th><th>List</th></tr></thead><tbody>';
-    for (const c of contacts) {
-      html += `<tr><td>${c.name || '—'}</td><td>${c.phone}</td><td>${(c.lists || []).join(', ')}</td></tr>`;
-    }
+    for (const c of contacts) html += `<tr><td>${c.name||'—'}</td><td>${c.phone}</td><td>${(c.lists||[]).join(', ')}</td></tr>`;
     html += '</tbody></table>';
     document.getElementById('contacts-table').innerHTML = html;
-  } catch {
-    document.getElementById('contacts-table').innerHTML = '<p style="color:#f87171;">Could not load contacts.</p>';
-  }
+  } catch { document.getElementById('contacts-table').innerHTML='<p style="color:#f87171;">Could not load contacts.</p>'; }
 }
 
-function handleDragOver(e) { e.preventDefault(); document.getElementById('upload-area').classList.add('drag'); }
-
-function handleDrop(e) {
-  e.preventDefault();
-  document.getElementById('upload-area').classList.remove('drag');
-  const file = e.dataTransfer.files[0];
-  if (file) processCSV(file);
-}
-
-function handleFileSelect(e) {
-  const file = e.target.files[0];
-  if (file) processCSV(file);
-}
-
+function handleDrop(e) { e.preventDefault(); const f=e.dataTransfer.files[0]; if(f) processCSV(f); }
+function handleFileSelect(e) { const f=e.target.files[0]; if(f) processCSV(f); }
 function processCSV(file) {
   const reader = new FileReader();
   reader.onload = async (e) => {
-    const csv = e.target.result;
-    const resultDiv = document.getElementById('import-result');
-    resultDiv.innerHTML = '<p style="color:var(--gold);">Importing contacts...</p>';
+    document.getElementById('import-result').innerHTML='<p style="color:var(--gold);">Importing...</p>';
     try {
-      const res = await fetch('/contacts/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ csv })
-      });
+      const res = await fetch('/contacts/import', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({csv:e.target.result}) });
       const data = await res.json();
-      resultDiv.innerHTML = `<p style="color:#4ade80;font-size:14px;">✅ Imported ${data.imported} contacts successfully!</p>`;
+      document.getElementById('import-result').innerHTML=`<p style="color:#4ade80;">✅ ${data.imported} contacts imported!</p>`;
       notify(`✅ ${data.imported} contacts imported!`);
-      loadContacts();
-      loadContactCount();
-    } catch (err) {
-      resultDiv.innerHTML = `<p style="color:#f87171;">Error: ${err.message}</p>`;
-    }
+      loadContacts(); loadContactCount();
+    } catch(err) { document.getElementById('import-result').innerHTML=`<p style="color:#f87171;">Error: ${err.message}</p>`; }
   };
   reader.readAsText(file);
 }
 
+async function loadSettings() {
+  try {
+    const res = await fetch('/settings');
+    currentSettings = await res.json();
+    document.getElementById('s-botIntro').value = currentSettings.botIntro || '';
+    document.getElementById('s-rsvpPrompt').value = currentSettings.rsvpPrompt || '';
+    document.getElementById('s-noReply').value = currentSettings.noReply || '';
+    document.getElementById('s-donationAsk').value = currentSettings.donationAsk || '';
+    document.getElementById('s-donationAmounts').value = currentSettings.donationAmounts || '';
+    document.getElementById('s-donationLink').value = currentSettings.donationLink || '';
+    document.getElementById('s-confirmationNote').value = currentSettings.confirmationNote || '';
+    document.getElementById('s-unrecognizedReply').value = currentSettings.unrecognizedReply || '';
+    updatePreview();
+  } catch { notify('Could not load settings', true); }
+}
+
+async function saveSettings() {
+  const settings = {
+    botIntro: document.getElementById('s-botIntro').value,
+    rsvpPrompt: document.getElementById('s-rsvpPrompt').value,
+    noReply: document.getElementById('s-noReply').value,
+    donationAsk: document.getElementById('s-donationAsk').value,
+    donationAmounts: document.getElementById('s-donationAmounts').value,
+    donationLink: document.getElementById('s-donationLink').value,
+    confirmationNote: document.getElementById('s-confirmationNote').value,
+    unrecognizedReply: document.getElementById('s-unrecognizedReply').value,
+  };
+  try {
+    await fetch('/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(settings) });
+    currentSettings = settings;
+    const badge = document.getElementById('saved-badge');
+    badge.classList.add('show');
+    setTimeout(() => badge.classList.remove('show'), 2500);
+    updatePreview();
+    notify('✅ Settings saved!');
+  } catch { notify('Could not save settings', true); }
+}
+
 // Init
-updatePreview();
+fetch('/settings').then(r=>r.json()).then(s=>{ currentSettings=s; updatePreview(); }).catch(()=>updatePreview());
 loadContactCount();
 </script>
 </body>
