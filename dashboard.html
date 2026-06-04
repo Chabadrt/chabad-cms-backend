@@ -255,11 +255,7 @@ function updatePreview() {
   const loc = document.getElementById('evt-location').value || '';
   const msg = document.getElementById('evt-msg').value;
   let preview = `Hi! This is Rabbi Benjy's new texting bot 🤖\n(yes, the Rabbi has been having a little too much fun with AI lately 😄)\n\n`;
-  preview += `Will you be joining us for ${name}`;
-  if (date) preview += ` — ${date}`;
-  if (time) preview += ` at ${time}`;
-  if (loc) preview += ` at ${loc}`;
-  preview += '?';
+  preview += `Will you be joining us for ${name} ${date} @ ${time}?`;
   if (msg) preview += `\n\n${msg}`;
   preview += `\n\nPlease reply with just a number:\n1 — I'll be there 🙏\n2 — Can't make it this time`;
   document.getElementById('preview').textContent = preview;
