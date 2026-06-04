@@ -520,26 +520,56 @@ async function sendBlast() {
 }
 
 // ── RSVPs ─────────────────────────────────────────────────
-async function loadRsvps() {
+async function loadRsvps() { await loadEvents(); }
+
+async function loadEvents() {
   try {
-    const res = await fetch('/rsvps/latest');
-    const data = await res.json();
-    if (!data.rsvps?.length) { document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No RSVPs yet.</p>'; return; }
-    const yes=data.rsvps.filter(r=>r.status==='yes').length;
-    const no=data.rsvps.filter(r=>r.status==='no').length;
-    const donations=data.rsvps.reduce((s,r)=>s+(r.donationAmount||0),0);
-    document.getElementById('stat-yes').textContent=yes;
-    document.getElementById('stat-no').textContent=no;
-    document.getElementById('stat-donations').textContent=donations?`$${donations}`:'$0';
-    let html='<table><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th><th>Donation</th></tr></thead><tbody>';
-    for(const r of data.rsvps){
-      const badge=r.status==='yes'?'badge-yes':r.status==='no'?'badge-no':'';
-      const label=r.status==='yes'?'✓ Yes':r.status==='no'?'✗ No':'⏳';
-      html+=`<tr><td>${r.name||'—'}</td><td>${r.phone}</td><td><span class="badge ${badge}">${label}</span></td><td>${r.guestCount||'—'}</td><td>${r.donationAmount?'$'+r.donationAmount:'—'}</td></tr>`;
+    const res = await fetch('/events');
+    const events = await res.json();
+    const sel = document.getElementById('event-selector');
+    if (!events.length) {
+      sel.innerHTML = '<option value="">No events yet</option>';
+      document.getElementById('rsvp-table').innerHTML = '<p style="color:var(--muted);padding:16px 0;">No events yet. Send a blast first!</p>';
+      return;
     }
-    html+='</tbody></table>';
-    document.getElementById('rsvp-table').innerHTML=html;
-  } catch { document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load.</p>'; }
+    sel.innerHTML = events.map(e => `<option value="${e.id}">${e.name} — ${e.date} @ ${e.time}</option>`).join('');
+    loadRsvpsForEvent(events[0].id);
+  } catch(err) {
+    console.error('Could not load events', err);
+    document.getElementById('rsvp-table').innerHTML = '<p style="color:#f87171;">Could not load events.</p>';
+  }
+}
+
+async function loadRsvpsForEvent(eventId) {
+  if (!eventId) return;
+  try {
+    const res = await fetch('/rsvps/' + eventId);
+    const rsvps = await res.json();
+    const sel = document.getElementById('event-selector');
+    const selectedText = sel.options[sel.selectedIndex]?.text || 'Event';
+    document.getElementById('rsvp-title').textContent = '📋 ' + selectedText;
+    if (!rsvps.length) {
+      document.getElementById('stat-yes').textContent = '0';
+      document.getElementById('stat-no').textContent = '0';
+      document.getElementById('stat-donations').textContent = '$0';
+      document.getElementById('rsvp-table').innerHTML = '<p style="color:var(--muted);padding:16px 0;">No RSVPs yet for this event.</p>';
+      return;
+    }
+    const yes = rsvps.filter(r => r.status === 'yes').length;
+    const no = rsvps.filter(r => r.status === 'no').length;
+    const donations = rsvps.reduce((s, r) => s + (r.donationAmount || 0), 0);
+    document.getElementById('stat-yes').textContent = yes;
+    document.getElementById('stat-no').textContent = no;
+    document.getElementById('stat-donations').textContent = donations ? `$${donations}` : '$0';
+    let html = '<table><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th><th>Donation</th></tr></thead><tbody>';
+    for (const r of rsvps) {
+      const badge = r.status === 'yes' ? 'badge-yes' : r.status === 'no' ? 'badge-no' : '';
+      const label = r.status === 'yes' ? '✓ Yes' : r.status === 'no' ? '✗ No' : '⏳';
+      html += `<tr><td>${r.name||'—'}</td><td>${r.phone}</td><td><span class="badge ${badge}">${label}</span></td><td>${r.guestCount||'—'}</td><td>${r.donationAmount?'$'+r.donationAmount:'—'}</td></tr>`;
+    }
+    html += '</tbody></table>';
+    document.getElementById('rsvp-table').innerHTML = html;
+  } catch { document.getElementById('rsvp-table').innerHTML = '<p style="color:#f87171;">Could not load RSVPs.</p>'; }
 }
 
 // ── FILE UPLOAD ───────────────────────────────────────────
