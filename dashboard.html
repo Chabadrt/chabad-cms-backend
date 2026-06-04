@@ -6,82 +6,84 @@
 <title>Chabad Rivertowns — SMS Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root { --gold:#C9A84C; --gold-light:#E8C97A; --navy:#0f1b2d; --navy-mid:#1a2d45; --navy-light:#243a57; --cream:#f9f4ec; --muted:#6b7280; --radius:12px; }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:'DM Sans',sans-serif; background:var(--navy); color:var(--cream); min-height:100vh; }
-  .header { background:var(--navy-mid); border-bottom:1px solid rgba(201,168,76,0.2); padding:20px 32px; display:flex; align-items:center; gap:16px; }
-  .header-logo { font-size:28px; }
-  .header-title { font-family:'Playfair Display',serif; font-size:22px; color:var(--gold); }
-  .header-sub { font-size:12px; color:var(--muted); }
-  .tabs { display:flex; background:var(--navy-mid); border-bottom:1px solid rgba(201,168,76,0.15); padding:0 32px; overflow-x:auto; }
-  .tab { padding:14px 20px; font-size:14px; cursor:pointer; color:var(--muted); border-bottom:2px solid transparent; transition:all 0.18s; white-space:nowrap; }
-  .tab.active { color:var(--gold); border-bottom-color:var(--gold); }
-  .tab:hover { color:var(--cream); }
-  .content { padding:32px; max-width:800px; margin:0 auto; }
-  .page { display:none; }
-  .page.active { display:block; }
-  .card { background:var(--navy-mid); border:1px solid rgba(201,168,76,0.15); border-radius:var(--radius); padding:28px; margin-bottom:24px; }
-  .card-title { font-family:'Playfair Display',serif; font-size:18px; color:var(--gold-light); margin-bottom:20px; }
-  .form-group { margin-bottom:18px; }
-  label { display:block; font-size:12px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
-  label .hint { font-size:11px; color:var(--muted); text-transform:none; letter-spacing:0; margin-left:6px; font-weight:400; }
-  input, textarea, select { width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(201,168,76,0.2); border-radius:8px; padding:11px 14px; font-family:'DM Sans',sans-serif; font-size:14px; color:var(--cream); outline:none; transition:border 0.18s; }
-  input:focus, textarea:focus, select:focus { border-color:var(--gold); }
-  input::placeholder, textarea::placeholder { color:rgba(249,244,236,0.25); }
-  select option { background:var(--navy-mid); }
-  textarea { resize:vertical; min-height:70px; }
-  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-  .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
-  .toggle-row:last-child { border-bottom:none; }
-  .toggle { width:40px; height:22px; background:rgba(255,255,255,0.1); border-radius:11px; cursor:pointer; position:relative; transition:background 0.2s; flex-shrink:0; }
-  .toggle.on { background:var(--gold); }
-  .toggle::after { content:''; position:absolute; top:3px; left:3px; width:16px; height:16px; background:white; border-radius:50%; transition:transform 0.2s; }
-  .toggle.on::after { transform:translateX(18px); }
-  .btn { padding:12px 24px; border-radius:8px; font-size:14px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; border:none; transition:all 0.18s; display:inline-flex; align-items:center; gap:8px; }
-  .btn-gold { background:var(--gold); color:var(--navy); }
-  .btn-gold:hover { background:var(--gold-light); }
-  .btn-outline { background:transparent; color:var(--gold); border:1px solid rgba(201,168,76,0.4); }
-  .btn-outline:hover { background:rgba(201,168,76,0.1); }
-  .btn:disabled { opacity:0.5; cursor:not-allowed; }
-  .btn-sm { padding:8px 16px; font-size:13px; }
-  .preview-box { background:rgba(0,0,0,0.2); border:1px solid rgba(201,168,76,0.15); border-radius:10px; padding:16px; font-size:13px; line-height:1.7; color:rgba(249,244,236,0.85); margin-top:16px; white-space:pre-wrap; }
-  .notif { position:fixed; bottom:24px; right:24px; background:var(--navy-mid); border:1px solid var(--gold); border-radius:10px; padding:14px 20px; font-size:14px; box-shadow:0 8px 30px rgba(0,0,0,0.4); transform:translateY(80px); opacity:0; transition:all 0.3s; z-index:999; max-width:360px; }
-  .notif.show { transform:translateY(0); opacity:1; }
-  .notif.error { border-color:#e74c3c; }
-  table { width:100%; border-collapse:collapse; font-size:13px; }
-  th { text-align:left; padding:10px 12px; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); border-bottom:1px solid rgba(201,168,76,0.15); }
-  td { padding:11px 12px; border-bottom:1px solid rgba(255,255,255,0.04); }
-  tr:hover td { background:rgba(201,168,76,0.04); }
-  .badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:11.5px; font-weight:500; }
-  .badge-yes { background:rgba(45,122,79,0.2); color:#4ade80; }
-  .badge-no { background:rgba(192,57,43,0.15); color:#f87171; }
-  .upload-area { border:2px dashed rgba(201,168,76,0.3); border-radius:10px; padding:32px; text-align:center; cursor:pointer; transition:all 0.2s; }
-  .upload-area:hover { border-color:var(--gold); background:rgba(201,168,76,0.05); }
-  .upload-area .icon { font-size:36px; margin-bottom:10px; }
-  .upload-area p { font-size:14px; color:var(--muted); }
-  .stat-row { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px; }
-  .stat { background:var(--navy-mid); border:1px solid rgba(201,168,76,0.15); border-radius:var(--radius); padding:20px; }
-  .stat-num { font-family:'Playfair Display',serif; font-size:32px; color:var(--gold); }
-  .stat-label { font-size:12px; color:var(--muted); margin-top:4px; }
-  .spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,0.3); border-top-color:white; border-radius:50%; animation:spin 0.8s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  .saved-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(45,122,79,0.2); color:#4ade80; padding:4px 12px; border-radius:20px; font-size:12px; opacity:0; transition:opacity 0.3s; }
-  .saved-badge.show { opacity:1; }
+  :root{--gold:#C9A84C;--gold-light:#E8C97A;--navy:#0f1b2d;--navy-mid:#1a2d45;--navy-light:#243a57;--cream:#f9f4ec;--muted:#6b7280;--radius:12px;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--cream);min-height:100vh;}
+  .header{background:var(--navy-mid);border-bottom:1px solid rgba(201,168,76,0.2);padding:20px 32px;display:flex;align-items:center;gap:16px;}
+  .header-logo{font-size:28px;}.header-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--gold);}
+  .header-sub{font-size:12px;color:var(--muted);}
+  .tabs{display:flex;background:var(--navy-mid);border-bottom:1px solid rgba(201,168,76,0.15);padding:0 32px;overflow-x:auto;}
+  .tab{padding:14px 18px;font-size:13.5px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all 0.18s;white-space:nowrap;}
+  .tab.active{color:var(--gold);border-bottom-color:var(--gold);}.tab:hover{color:var(--cream);}
+  .content{padding:32px;max-width:820px;margin:0 auto;}
+  .page{display:none;}.page.active{display:block;}
+  .card{background:var(--navy-mid);border:1px solid rgba(201,168,76,0.15);border-radius:var(--radius);padding:24px;margin-bottom:20px;}
+  .card-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--gold-light);margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;}
+  .form-group{margin-bottom:16px;}
+  label{display:block;font-size:11.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;}
+  .hint{font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px;font-weight:400;}
+  input,textarea,select{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--cream);outline:none;transition:border 0.18s;}
+  input:focus,textarea:focus,select:focus{border-color:var(--gold);}
+  input::placeholder,textarea::placeholder{color:rgba(249,244,236,0.25);}
+  select option{background:var(--navy-mid);}textarea{resize:vertical;min-height:70px;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+  .toggle-row:last-child{border-bottom:none;}
+  .toggle{width:40px;height:22px;background:rgba(255,255,255,0.1);border-radius:11px;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;}
+  .toggle.on{background:var(--gold);}
+  .toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:white;border-radius:50%;transition:transform 0.2s;}
+  .toggle.on::after{transform:translateX(18px);}
+  .btn{padding:10px 20px;border-radius:8px;font-size:13.5px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;border:none;transition:all 0.18s;display:inline-flex;align-items:center;gap:7px;}
+  .btn-gold{background:var(--gold);color:var(--navy);}.btn-gold:hover{background:var(--gold-light);}
+  .btn-outline{background:transparent;color:var(--gold);border:1px solid rgba(201,168,76,0.4);}.btn-outline:hover{background:rgba(201,168,76,0.1);}
+  .btn-danger{background:rgba(192,57,43,0.15);color:#f87171;border:1px solid rgba(192,57,43,0.3);}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;}.btn-sm{padding:6px 13px;font-size:12.5px;}
+  .preview-box{background:rgba(0,0,0,0.2);border:1px solid rgba(201,168,76,0.15);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:rgba(249,244,236,0.85);white-space:pre-wrap;}
+  .notif{position:fixed;bottom:24px;right:24px;background:var(--navy-mid);border:1px solid var(--gold);border-radius:10px;padding:14px 20px;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,0.4);transform:translateY(80px);opacity:0;transition:all 0.3s;z-index:999;max-width:360px;}
+  .notif.show{transform:translateY(0);opacity:1;}.notif.error{border-color:#e74c3c;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:9px 11px;font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);border-bottom:1px solid rgba(201,168,76,0.15);}
+  td{padding:10px 11px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
+  tr:hover td{background:rgba(201,168,76,0.04);}
+  .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;}
+  .badge-yes{background:rgba(45,122,79,0.2);color:#4ade80;}.badge-no{background:rgba(192,57,43,0.15);color:#f87171;}
+  .upload-area{border:2px dashed rgba(201,168,76,0.3);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:all 0.2s;}
+  .upload-area:hover{border-color:var(--gold);background:rgba(201,168,76,0.05);}
+  .upload-area .icon{font-size:32px;margin-bottom:8px;}.upload-area p{font-size:13.5px;color:var(--muted);}
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+  .stat{background:var(--navy-mid);border:1px solid rgba(201,168,76,0.15);border-radius:var(--radius);padding:18px;}
+  .stat-num{font-family:'Playfair Display',serif;font-size:30px;color:var(--gold);}.stat-label{font-size:12px;color:var(--muted);margin-top:3px;}
+  .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .saved-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(45,122,79,0.2);color:#4ade80;padding:3px 10px;border-radius:20px;font-size:12px;opacity:0;transition:opacity 0.3s;}
+  .saved-badge.show{opacity:1;}
+  /* Contact selector */
+  .contact-selector{max-height:260px;overflow-y:auto;border:1px solid rgba(201,168,76,0.2);border-radius:8px;background:rgba(255,255,255,0.03);}
+  .contact-item{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.15s;}
+  .contact-item:last-child{border-bottom:none;}.contact-item:hover{background:rgba(201,168,76,0.06);}
+  .contact-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--gold);}
+  .contact-name{font-size:13.5px;}.contact-phone{font-size:11.5px;color:var(--muted);}
+  .select-actions{display:flex;gap:8px;margin-bottom:8px;}
+  /* List manager */
+  .list-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+  .list-item:last-child{border-bottom:none;}.list-item input{flex:1;}
+  .send-mode-tabs{display:flex;gap:4px;background:rgba(255,255,255,0.04);border-radius:8px;padding:3px;margin-bottom:16px;}
+  .send-mode-tab{flex:1;text-align:center;padding:8px;border-radius:6px;font-size:13px;cursor:pointer;color:rgba(249,244,236,0.5);transition:all 0.15s;}
+  .send-mode-tab.active{background:var(--navy-light);color:var(--cream);font-weight:500;}
 </style>
 </head>
 <body>
 <div class="header">
   <div class="header-logo">✡️</div>
-  <div>
-    <div class="header-title">Chabad of the Rivertowns</div>
-    <div class="header-sub">Event SMS Dashboard</div>
-  </div>
+  <div><div class="header-title">Chabad of the Rivertowns</div><div class="header-sub">Event SMS Dashboard</div></div>
 </div>
 <div class="tabs">
   <div class="tab active" onclick="showTab('blast',this)">📤 Send Blast</div>
   <div class="tab" onclick="showTab('rsvps',this)">📋 RSVPs</div>
   <div class="tab" onclick="showTab('contacts',this)">👥 Contacts</div>
-  <div class="tab" onclick="showTab('settings',this)">✏️ Message Settings</div>
+  <div class="tab" onclick="showTab('settings',this)">✏️ Messages</div>
+  <div class="tab" onclick="showTab('lists',this)">🗂️ Lists</div>
 </div>
 <div class="content">
 
@@ -89,39 +91,18 @@
   <div class="page active" id="tab-blast">
     <div class="card">
       <div class="card-title">🕯️ Event Details</div>
-      <div class="form-group">
-        <label>Event Name</label>
-        <input type="text" id="evt-name" placeholder="Minyan" oninput="updatePreview()">
-      </div>
+      <div class="form-group"><label>Event Name</label><input type="text" id="evt-name" placeholder="Minyan" oninput="updatePreview()"></div>
       <div class="two-col">
-        <div class="form-group">
-          <label>Date</label>
-          <input type="text" id="evt-date" placeholder="tomorrow" oninput="updatePreview()">
-        </div>
-        <div class="form-group">
-          <label>Time</label>
-          <input type="text" id="evt-time" placeholder="8:15 AM" oninput="updatePreview()">
-        </div>
+        <div class="form-group"><label>Date</label><input type="text" id="evt-date" placeholder="tomorrow" oninput="updatePreview()"></div>
+        <div class="form-group"><label>Time</label><input type="text" id="evt-time" placeholder="8:15 AM" oninput="updatePreview()"></div>
       </div>
-      <div class="form-group">
-        <label>Custom Message <span class="hint">(optional — appears after event line)</span></label>
-        <textarea id="evt-msg" placeholder="e.g. Breakfast sponsored by the Goldstein family!" oninput="updatePreview()"></textarea>
-      </div>
-      <div class="form-group">
-        <label>Confirmation Note <span class="hint">(sent after RSVP is complete)</span></label>
-        <input type="text" id="evt-confirm" placeholder="Looking forward to seeing you! 🙏" oninput="updatePreview()">
-      </div>
+      <div class="form-group"><label>Custom Message <span class="hint">(optional)</span></label><textarea id="evt-msg" placeholder="e.g. Breakfast sponsored by the Goldstein family!" oninput="updatePreview()"></textarea></div>
+      <div class="form-group"><label>Confirmation Note <span class="hint">(sent after RSVP)</span></label><input type="text" id="evt-confirm" placeholder="Looking forward to seeing you! 🙏"></div>
     </div>
     <div class="card">
       <div class="card-title">⚙️ Options</div>
-      <div class="toggle-row">
-        <div><div style="font-size:14px;">Ask for donation</div><div style="font-size:12px;color:var(--muted);">Offer $5, $10, or $18 (Chai) after RSVP</div></div>
-        <div class="toggle on" id="tog-donation" onclick="this.classList.toggle('on')"></div>
-      </div>
-      <div class="toggle-row">
-        <div><div style="font-size:14px;">Ask headcount</div><div style="font-size:12px;color:var(--muted);">How many people are joining?</div></div>
-        <div class="toggle" id="tog-headcount" onclick="this.classList.toggle('on')"></div>
-      </div>
+      <div class="toggle-row"><div><div style="font-size:14px;">Ask for donation</div><div style="font-size:12px;color:var(--muted);">Offer $5, $10, $18 after RSVP</div></div><div class="toggle on" id="tog-donation" onclick="this.classList.toggle('on')"></div></div>
+      <div class="toggle-row"><div><div style="font-size:14px;">Ask headcount</div><div style="font-size:12px;color:var(--muted);">How many people joining?</div></div><div class="toggle" id="tog-headcount" onclick="this.classList.toggle('on')"></div></div>
     </div>
     <div class="card">
       <div class="card-title">📱 Message Preview</div>
@@ -129,18 +110,28 @@
     </div>
     <div class="card">
       <div class="card-title">📤 Send To</div>
-      <div class="form-group">
-        <label>Contact List</label>
-        <select id="send-list" onchange="loadContactCount()">
-          <option value="all">All contacts</option>
-          <option value="minyan">Minyan list</option>
-          <option value="women">Women's list</option>
-          <option value="cyp">CYP young professionals</option>
-          <option value="test">Test (single contact)</option>
-        </select>
+      <div class="send-mode-tabs">
+        <div class="send-mode-tab active" onclick="setSendMode('list',this)">📋 By List</div>
+        <div class="send-mode-tab" onclick="setSendMode('individual',this)">👤 Specific People</div>
       </div>
-      <div id="contact-count" style="font-size:13px;color:var(--muted);margin-bottom:16px;">Loading...</div>
-      <button class="btn btn-gold" onclick="sendBlast()" id="send-btn">📤 Send Blast Now</button>
+      <!-- List mode -->
+      <div id="send-mode-list">
+        <div class="form-group"><label>Contact List</label><select id="send-list" onchange="loadContactCount()"></select></div>
+        <div id="contact-count" style="font-size:13px;color:var(--muted);margin-bottom:16px;">Loading...</div>
+      </div>
+      <!-- Individual mode -->
+      <div id="send-mode-individual" style="display:none;">
+        <div class="form-group"><input type="text" id="contact-search" placeholder="🔍 Search by name or phone..." oninput="filterContacts()"></div>
+        <div class="select-actions">
+          <button class="btn btn-outline btn-sm" onclick="selectAllContacts()">Select All</button>
+          <button class="btn btn-outline btn-sm" onclick="deselectAllContacts()">Deselect All</button>
+          <span id="selected-count" style="font-size:13px;color:var(--muted);align-self:center;margin-left:4px;">0 selected</span>
+        </div>
+        <div class="contact-selector" id="contact-selector"></div>
+      </div>
+      <div style="margin-top:16px;">
+        <button class="btn btn-gold" onclick="sendBlast()" id="send-btn">📤 Send Blast Now</button>
+      </div>
     </div>
   </div>
 
@@ -152,10 +143,7 @@
       <div class="stat"><div class="stat-num" id="stat-donations">—</div><div class="stat-label">Donations</div></div>
     </div>
     <div class="card">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>📋 Latest Event RSVPs</span>
-        <button class="btn btn-outline btn-sm" onclick="loadRsvps()">🔄 Refresh</button>
-      </div>
+      <div class="card-title"><span>📋 Latest Event RSVPs</span><button class="btn btn-outline btn-sm" onclick="loadRsvps()">🔄 Refresh</button></div>
       <div id="rsvp-table"><p style="color:var(--muted);font-size:14px;">Loading RSVPs...</p></div>
     </div>
   </div>
@@ -164,19 +152,17 @@
   <div class="page" id="tab-contacts">
     <div class="card">
       <div class="card-title">⬆️ Import from CSV</div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Columns: <strong>first</strong>, <strong>last</strong> (or <strong>name</strong>), <strong>phone</strong>, <strong>list</strong> (e.g. minyan, women, cyp, test)</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Columns: <strong>first</strong>, <strong>last</strong> (or <strong>name</strong>), <strong>phone</strong>, <strong>list</strong> (e.g. minyan). Existing contacts are updated, not duplicated.</p>
       <div class="upload-area" onclick="document.getElementById('csv-input').click()" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
         <div class="icon">📂</div>
         <p><strong>Click to upload</strong> or drag and drop your CSV</p>
       </div>
       <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleFileSelect(event)">
-      <div id="import-result" style="margin-top:16px;"></div>
+      <div id="import-result" style="margin-top:14px;"></div>
     </div>
     <div class="card">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>👥 All Contacts</span>
-        <button class="btn btn-outline btn-sm" onclick="loadContacts()">🔄 Refresh</button>
-      </div>
+      <div class="card-title"><span>👥 All Contacts</span><button class="btn btn-outline btn-sm" onclick="loadContacts()">🔄 Refresh</button></div>
+      <div class="form-group" style="margin-bottom:12px;"><input type="text" id="contacts-search" placeholder="🔍 Search contacts..." oninput="filterContactsTable()"></div>
       <div id="contacts-table"><p style="color:var(--muted);font-size:14px;">Loading...</p></div>
     </div>
   </div>
@@ -184,46 +170,38 @@
   <!-- SETTINGS TAB -->
   <div class="page" id="tab-settings">
     <div class="card">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>✏️ Message Settings</span>
-        <span class="saved-badge" id="saved-badge">✅ Saved!</span>
+      <div class="card-title"><span>✏️ Message Settings</span><span class="saved-badge" id="saved-badge">✅ Saved!</span></div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:22px;">Edit any message the bot sends. Changes take effect immediately.</p>
+      <div class="form-group"><label>Bot Introduction <span class="hint">(opening line of every blast)</span></label><textarea id="s-botIntro" rows="3"></textarea></div>
+      <div class="form-group"><label>RSVP Prompt <span class="hint">(appears after event details)</span></label><textarea id="s-rsvpPrompt" rows="3"></textarea></div>
+      <div class="form-group"><label>No Reply Message <span class="hint">(when someone says No)</span></label><textarea id="s-noReply" rows="2"></textarea></div>
+      <div class="form-group"><label>Donation Ask <span class="hint">(shown after Yes RSVP)</span></label><textarea id="s-donationAsk" rows="2"></textarea></div>
+      <div class="form-group"><label>Donation Menu <span class="hint">(the options guests see)</span></label><textarea id="s-donationAmounts" rows="4"></textarea></div>
+      <div class="three-col">
+        <div class="form-group"><label>$5 Stripe Link</label><input type="text" id="s-link5" placeholder="https://buy.stripe.com/..."></div>
+        <div class="form-group"><label>$10 Stripe Link</label><input type="text" id="s-link10" placeholder="https://buy.stripe.com/..."></div>
+        <div class="form-group"><label>$18 Stripe Link</label><input type="text" id="s-link18" placeholder="https://buy.stripe.com/..."></div>
       </div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:24px;">Edit any message the bot sends. Changes take effect immediately — no code needed.</p>
-
-      <div class="form-group">
-        <label>Bot Introduction <span class="hint">(opening line of every blast)</span></label>
-        <textarea id="s-botIntro" rows="3"></textarea>
-      </div>
-      <div class="form-group">
-        <label>RSVP Prompt <span class="hint">(appears after event details)</span></label>
-        <textarea id="s-rsvpPrompt" rows="3"></textarea>
-      </div>
-      <div class="form-group">
-        <label>No Reply Message <span class="hint">(when someone replies 2 / No)</span></label>
-        <textarea id="s-noReply" rows="2"></textarea>
-      </div>
-      <div class="form-group">
-        <label>Donation Ask Message <span class="hint">(shown after yes RSVP)</span></label>
-        <textarea id="s-donationAsk" rows="2"></textarea>
-      </div>
-      <div class="form-group">
-        <label>Donation Options <span class="hint">(the menu guests see)</span></label>
-        <textarea id="s-donationAmounts" rows="4"></textarea>
-      </div>
-      <div class="form-group">
-        <label>Stripe Donation Link</label>
-        <input type="text" id="s-donationLink" placeholder="https://buy.stripe.com/...">
-      </div>
-      <div class="form-group">
-        <label>Default Confirmation Note <span class="hint">(after RSVP is complete)</span></label>
-        <input type="text" id="s-confirmationNote">
-      </div>
-      <div class="form-group">
-        <label>Unrecognized Reply Message <span class="hint">(when someone texts something unexpected)</span></label>
-        <textarea id="s-unrecognizedReply" rows="3"></textarea>
-      </div>
-
+      <div class="form-group"><label>Default Confirmation Note</label><input type="text" id="s-confirmationNote"></div>
+      <div class="form-group"><label>Unrecognized Reply Message</label><textarea id="s-unrecognizedReply" rows="3"></textarea></div>
       <button class="btn btn-gold" onclick="saveSettings()">💾 Save All Settings</button>
+    </div>
+  </div>
+
+  <!-- LISTS TAB -->
+  <div class="page" id="tab-lists">
+    <div class="card">
+      <div class="card-title">🗂️ Manage Contact Lists</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Add, rename, or remove lists. These appear in the Send Blast dropdown automatically.</p>
+      <div id="lists-manager"></div>
+      <div style="margin-top:16px;display:flex;gap:10px;">
+        <input type="text" id="new-list-name" placeholder="New list name (e.g. Shabbat Dinner)" style="max-width:260px;">
+        <button class="btn btn-gold" onclick="addList()">+ Add List</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 List Summary</div>
+      <div id="list-summary"><p style="color:var(--muted);font-size:14px;">Loading...</p></div>
     </div>
   </div>
 
@@ -232,6 +210,8 @@
 
 <script>
 let currentSettings = {};
+let allContacts = [];
+let sendMode = 'list';
 
 function showTab(name, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -241,6 +221,8 @@ function showTab(name, el) {
   if (name === 'rsvps') loadRsvps();
   if (name === 'contacts') loadContacts();
   if (name === 'settings') loadSettings();
+  if (name === 'lists') loadListsTab();
+  if (name === 'blast') { loadListDropdown(); loadContactCount(); }
 }
 
 function notify(msg, isError=false) {
@@ -250,6 +232,178 @@ function notify(msg, isError=false) {
   setTimeout(() => n.classList.remove('show'), 4000);
 }
 
+function setSendMode(mode, el) {
+  sendMode = mode;
+  document.querySelectorAll('.send-mode-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('send-mode-list').style.display = mode === 'list' ? 'block' : 'none';
+  document.getElementById('send-mode-individual').style.display = mode === 'individual' ? 'block' : 'none';
+  if (mode === 'individual') renderContactSelector();
+}
+
+// ── LISTS ─────────────────────────────────────────────────
+function getLists() { return currentSettings.lists || []; }
+
+function loadListDropdown() {
+  const sel = document.getElementById('send-list');
+  const lists = getLists();
+  sel.innerHTML = lists.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+  loadContactCount();
+}
+
+async function loadListsTab() {
+  await loadSettingsData();
+  renderListsManager();
+  renderListSummary();
+}
+
+function renderListsManager() {
+  const lists = getLists();
+  const container = document.getElementById('lists-manager');
+  if (!lists.length) { container.innerHTML = '<p style="color:var(--muted);">No lists yet.</p>'; return; }
+  container.innerHTML = lists.map((l, i) => `
+    <div class="list-item">
+      <input type="text" value="${l.name}" id="list-name-${l.id}" onchange="renameList('${l.id}', this.value)">
+      <span style="font-size:12px;color:var(--muted);min-width:80px;" id="list-count-${l.id}">loading...</span>
+      ${l.id === 'all' ? '' : `<button class="btn btn-danger btn-sm" onclick="removeList('${l.id}')">Remove</button>`}
+    </div>`).join('');
+  // Load counts
+  fetch('/contacts').then(r=>r.json()).then(contacts => {
+    allContacts = contacts;
+    lists.forEach(l => {
+      const el = document.getElementById('list-count-' + l.id);
+      if (el) {
+        const count = l.id === 'all' ? contacts.length : contacts.filter(c => c.lists?.includes(l.id)).length;
+        el.textContent = `${count} contact${count !== 1 ? 's' : ''}`;
+      }
+    });
+  }).catch(() => {});
+}
+
+function renderListSummary() {
+  fetch('/contacts').then(r=>r.json()).then(contacts => {
+    const lists = getLists().filter(l => l.id !== 'all');
+    let html = '<table><thead><tr><th>List</th><th>Contacts</th></tr></thead><tbody>';
+    lists.forEach(l => {
+      const count = contacts.filter(c => c.lists?.includes(l.id)).length;
+      html += `<tr><td>${l.name}</td><td>${count}</td></tr>`;
+    });
+    const unassigned = contacts.filter(c => !c.lists?.length || c.lists.every(x => x === 'all')).length;
+    if (unassigned) html += `<tr><td style="color:var(--muted);">Unassigned</td><td>${unassigned}</td></tr>`;
+    html += '</tbody></table>';
+    document.getElementById('list-summary').innerHTML = html;
+  }).catch(() => { document.getElementById('list-summary').innerHTML = '<p style="color:#f87171;">Could not load.</p>'; });
+}
+
+async function addList() {
+  const nameInput = document.getElementById('new-list-name');
+  const name = nameInput.value.trim();
+  if (!name) { notify('Please enter a list name', true); return; }
+  const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const lists = getLists();
+  if (lists.find(l => l.id === id)) { notify('A list with that name already exists', true); return; }
+  lists.push({ id, name });
+  await saveSettingsData({ lists });
+  nameInput.value = '';
+  renderListsManager();
+  loadListDropdown();
+  notify(`✅ "${name}" list added!`);
+}
+
+async function renameList(id, newName) {
+  const lists = getLists().map(l => l.id === id ? { ...l, name: newName } : l);
+  await saveSettingsData({ lists });
+  loadListDropdown();
+}
+
+async function removeList(id) {
+  if (!confirm('Remove this list? Contacts in it will not be deleted.')) return;
+  const lists = getLists().filter(l => l.id !== id);
+  await saveSettingsData({ lists });
+  renderListsManager();
+  loadListDropdown();
+  notify('List removed.');
+}
+
+// ── CONTACTS ──────────────────────────────────────────────
+async function loadContacts() {
+  try {
+    const res = await fetch('/contacts');
+    allContacts = await res.json();
+    renderContactsTable(allContacts);
+  } catch { document.getElementById('contacts-table').innerHTML='<p style="color:#f87171;">Could not load contacts.</p>'; }
+}
+
+function renderContactsTable(contacts) {
+  if (!contacts.length) { document.getElementById('contacts-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No contacts yet.</p>'; return; }
+  let html = `<p style="font-size:13px;color:var(--muted);margin-bottom:10px;">${contacts.length} contact${contacts.length !== 1 ? 's' : ''}</p>`;
+  html += '<table><thead><tr><th>Name</th><th>Phone</th><th>List</th></tr></thead><tbody>';
+  for (const c of contacts) html += `<tr><td>${c.name||'—'}</td><td>${c.phone}</td><td>${(c.lists||[]).join(', ')}</td></tr>`;
+  html += '</tbody></table>';
+  document.getElementById('contacts-table').innerHTML = html;
+}
+
+function filterContactsTable() {
+  const q = document.getElementById('contacts-search').value.toLowerCase();
+  const filtered = allContacts.filter(c => (c.name||'').toLowerCase().includes(q) || c.phone.includes(q));
+  renderContactsTable(filtered);
+}
+
+function renderContactSelector() {
+  const container = document.getElementById('contact-selector');
+  if (!allContacts.length) {
+    fetch('/contacts').then(r=>r.json()).then(c => { allContacts = c; renderContactSelector(); });
+    return;
+  }
+  container.innerHTML = allContacts.map(c => `
+    <div class="contact-item" onclick="toggleContact('${c.phone}')">
+      <input type="checkbox" id="chk-${c.phone}" value="${c.phone}">
+      <div><div class="contact-name">${c.name||'Unknown'}</div><div class="contact-phone">${c.phone} · ${(c.lists||[]).join(', ')}</div></div>
+    </div>`).join('');
+  updateSelectedCount();
+}
+
+function toggleContact(phone) {
+  const chk = document.getElementById('chk-' + phone);
+  chk.checked = !chk.checked;
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  const count = document.querySelectorAll('#contact-selector input:checked').length;
+  document.getElementById('selected-count').textContent = `${count} selected`;
+}
+
+function selectAllContacts() {
+  document.querySelectorAll('#contact-selector input[type=checkbox]').forEach(c => c.checked = true);
+  updateSelectedCount();
+}
+
+function deselectAllContacts() {
+  document.querySelectorAll('#contact-selector input[type=checkbox]').forEach(c => c.checked = false);
+  updateSelectedCount();
+}
+
+function filterContacts() {
+  const q = document.getElementById('contact-search').value.toLowerCase();
+  document.querySelectorAll('.contact-item').forEach(item => {
+    const text = item.textContent.toLowerCase();
+    item.style.display = text.includes(q) ? 'flex' : 'none';
+  });
+}
+
+async function loadContactCount() {
+  try {
+    const res = await fetch('/contacts');
+    const contacts = await res.json();
+    allContacts = contacts;
+    const list = document.getElementById('send-list').value;
+    const filtered = list === 'all' ? contacts : contacts.filter(c => c.lists?.includes(list));
+    document.getElementById('contact-count').textContent = `${filtered.length} contact${filtered.length !== 1 ? 's' : ''} will receive this message`;
+  } catch { document.getElementById('contact-count').textContent = 'Could not load count'; }
+}
+
+// ── BLAST ─────────────────────────────────────────────────
 function updatePreview() {
   const name = document.getElementById('evt-name').value || '[Event Name]';
   const date = document.getElementById('evt-date').value || '[Date]';
@@ -263,16 +417,6 @@ function updatePreview() {
   document.getElementById('preview').textContent = preview;
 }
 
-async function loadContactCount() {
-  try {
-    const res = await fetch('/contacts');
-    const contacts = await res.json();
-    const list = document.getElementById('send-list').value;
-    const filtered = list === 'all' ? contacts : contacts.filter(c => c.lists?.includes(list));
-    document.getElementById('contact-count').textContent = `${filtered.length} contact${filtered.length !== 1 ? 's' : ''} will receive this message`;
-  } catch { document.getElementById('contact-count').textContent = 'Could not load count'; }
-}
-
 async function sendBlast() {
   const name = document.getElementById('evt-name').value;
   const date = document.getElementById('evt-date').value;
@@ -282,87 +426,96 @@ async function sendBlast() {
   const confirmationNote = document.getElementById('evt-confirm').value;
   const askDonation = document.getElementById('tog-donation').classList.contains('on');
   const askHeadcount = document.getElementById('tog-headcount').classList.contains('on');
-  const list = document.getElementById('send-list').value;
-  let contacts = [];
-  try { const r = await fetch('/contacts'); contacts = await r.json(); } catch { notify('Could not load contacts', true); return; }
-  const phones = list === 'all' ? contacts.map(c => c.phone) : contacts.filter(c => c.lists?.includes(list)).map(c => c.phone);
-  if (!phones.length) { notify('No contacts found for this list. Please import contacts first.', true); return; }
+  let phones = [];
+  if (sendMode === 'list') {
+    const list = document.getElementById('send-list').value;
+    const contacts = await fetch('/contacts').then(r=>r.json());
+    phones = list === 'all' ? contacts.map(c=>c.phone) : contacts.filter(c=>c.lists?.includes(list)).map(c=>c.phone);
+  } else {
+    phones = [...document.querySelectorAll('#contact-selector input:checked')].map(c=>c.value);
+  }
+  if (!phones.length) { notify('No contacts selected.', true); return; }
   const btn = document.getElementById('send-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending...';
   try {
     const res = await fetch('/blast', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ event:{name,date,time,customMessage,confirmationNote,askDonation,askHeadcount}, phones }) });
     const data = await res.json();
-    notify(`✅ Sent to ${data.sent} contact${data.sent !== 1 ? 's' : ''}!${data.failed > 0 ? ` (${data.failed} failed)` : ''}`);
-  } catch (err) { notify('Error: ' + err.message, true); }
+    notify(`✅ Sent to ${data.sent} contact${data.sent!==1?'s':''}!${data.failed>0?` (${data.failed} failed)`:''}`);
+  } catch(err) { notify('Error: '+err.message, true); }
   finally { btn.disabled=false; btn.innerHTML='📤 Send Blast Now'; }
 }
 
+// ── RSVPs ─────────────────────────────────────────────────
 async function loadRsvps() {
   try {
     const res = await fetch('/rsvps/latest');
     const data = await res.json();
     if (!data.rsvps?.length) { document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No RSVPs yet.</p>'; return; }
-    const yes = data.rsvps.filter(r=>r.status==='yes').length;
-    const no = data.rsvps.filter(r=>r.status==='no').length;
-    const donations = data.rsvps.reduce((s,r)=>s+(r.donationAmount||0),0);
-    document.getElementById('stat-yes').textContent = yes;
-    document.getElementById('stat-no').textContent = no;
-    document.getElementById('stat-donations').textContent = donations ? `$${donations}` : '$0';
-    let html = '<table><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th><th>Donation</th></tr></thead><tbody>';
-    for (const r of data.rsvps) {
-      const badge = r.status==='yes'?'badge-yes':r.status==='no'?'badge-no':'';
-      const label = r.status==='yes'?'✓ Yes':r.status==='no'?'✗ No':'⏳';
-      html += `<tr><td>${r.name||'—'}</td><td>${r.phone}</td><td><span class="badge ${badge}">${label}</span></td><td>${r.guestCount||'—'}</td><td>${r.donationAmount?'$'+r.donationAmount:'—'}</td></tr>`;
+    const yes=data.rsvps.filter(r=>r.status==='yes').length;
+    const no=data.rsvps.filter(r=>r.status==='no').length;
+    const donations=data.rsvps.reduce((s,r)=>s+(r.donationAmount||0),0);
+    document.getElementById('stat-yes').textContent=yes;
+    document.getElementById('stat-no').textContent=no;
+    document.getElementById('stat-donations').textContent=donations?`$${donations}`:'$0';
+    let html='<table><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th><th>Donation</th></tr></thead><tbody>';
+    for(const r of data.rsvps){
+      const badge=r.status==='yes'?'badge-yes':r.status==='no'?'badge-no':'';
+      const label=r.status==='yes'?'✓ Yes':r.status==='no'?'✗ No':'⏳';
+      html+=`<tr><td>${r.name||'—'}</td><td>${r.phone}</td><td><span class="badge ${badge}">${label}</span></td><td>${r.guestCount||'—'}</td><td>${r.donationAmount?'$'+r.donationAmount:'—'}</td></tr>`;
     }
-    html += '</tbody></table>';
-    document.getElementById('rsvp-table').innerHTML = html;
-  } catch { document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load RSVPs.</p>'; }
+    html+='</tbody></table>';
+    document.getElementById('rsvp-table').innerHTML=html;
+  } catch { document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load.</p>'; }
 }
 
-async function loadContacts() {
-  try {
-    const res = await fetch('/contacts');
-    const contacts = await res.json();
-    if (!contacts.length) { document.getElementById('contacts-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No contacts yet.</p>'; return; }
-    let html = `<p style="font-size:13px;color:var(--muted);margin-bottom:12px;">${contacts.length} total contacts</p>`;
-    html += '<table><thead><tr><th>Name</th><th>Phone</th><th>List</th></tr></thead><tbody>';
-    for (const c of contacts) html += `<tr><td>${c.name||'—'}</td><td>${c.phone}</td><td>${(c.lists||[]).join(', ')}</td></tr>`;
-    html += '</tbody></table>';
-    document.getElementById('contacts-table').innerHTML = html;
-  } catch { document.getElementById('contacts-table').innerHTML='<p style="color:#f87171;">Could not load contacts.</p>'; }
-}
-
-function handleDrop(e) { e.preventDefault(); const f=e.dataTransfer.files[0]; if(f) processCSV(f); }
-function handleFileSelect(e) { const f=e.target.files[0]; if(f) processCSV(f); }
-function processCSV(file) {
-  const reader = new FileReader();
-  reader.onload = async (e) => {
+// ── FILE UPLOAD ───────────────────────────────────────────
+function handleDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f)processCSV(f);}
+function handleFileSelect(e){const f=e.target.files[0];if(f)processCSV(f);}
+function processCSV(file){
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
     document.getElementById('import-result').innerHTML='<p style="color:var(--gold);">Importing...</p>';
-    try {
-      const res = await fetch('/contacts/import', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({csv:e.target.result}) });
-      const data = await res.json();
+    try{
+      const res=await fetch('/contacts/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv:e.target.result})});
+      const data=await res.json();
       document.getElementById('import-result').innerHTML=`<p style="color:#4ade80;">✅ ${data.imported} contacts imported!</p>`;
       notify(`✅ ${data.imported} contacts imported!`);
-      loadContacts(); loadContactCount();
-    } catch(err) { document.getElementById('import-result').innerHTML=`<p style="color:#f87171;">Error: ${err.message}</p>`; }
+      loadContacts();loadContactCount();
+    }catch(err){document.getElementById('import-result').innerHTML=`<p style="color:#f87171;">Error: ${err.message}</p>`;}
   };
   reader.readAsText(file);
 }
 
-async function loadSettings() {
+// ── SETTINGS ──────────────────────────────────────────────
+async function loadSettingsData() {
   try {
     const res = await fetch('/settings');
     currentSettings = await res.json();
-    document.getElementById('s-botIntro').value = currentSettings.botIntro || '';
-    document.getElementById('s-rsvpPrompt').value = currentSettings.rsvpPrompt || '';
-    document.getElementById('s-noReply').value = currentSettings.noReply || '';
-    document.getElementById('s-donationAsk').value = currentSettings.donationAsk || '';
-    document.getElementById('s-donationAmounts').value = currentSettings.donationAmounts || '';
-    document.getElementById('s-donationLink').value = currentSettings.donationLink || '';
-    document.getElementById('s-confirmationNote').value = currentSettings.confirmationNote || '';
-    document.getElementById('s-unrecognizedReply').value = currentSettings.unrecognizedReply || '';
-    updatePreview();
-  } catch { notify('Could not load settings', true); }
+    return currentSettings;
+  } catch { return {}; }
+}
+
+async function loadSettings() {
+  await loadSettingsData();
+  document.getElementById('s-botIntro').value = currentSettings.botIntro||'';
+  document.getElementById('s-rsvpPrompt').value = currentSettings.rsvpPrompt||'';
+  document.getElementById('s-noReply').value = currentSettings.noReply||'';
+  document.getElementById('s-donationAsk').value = currentSettings.donationAsk||'';
+  document.getElementById('s-donationAmounts').value = currentSettings.donationAmounts||'';
+  const links = currentSettings.donationLinks||{};
+  document.getElementById('s-link5').value = links[5]||'';
+  document.getElementById('s-link10').value = links[10]||'';
+  document.getElementById('s-link18').value = links[18]||'';
+  document.getElementById('s-confirmationNote').value = currentSettings.confirmationNote||'';
+  document.getElementById('s-unrecognizedReply').value = currentSettings.unrecognizedReply||'';
+  updatePreview();
+}
+
+async function saveSettingsData(partial) {
+  const merged = { ...currentSettings, ...partial };
+  const res = await fetch('/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(merged) });
+  currentSettings = (await res.json()).settings || merged;
+  return currentSettings;
 }
 
 async function saveSettings() {
@@ -372,24 +525,27 @@ async function saveSettings() {
     noReply: document.getElementById('s-noReply').value,
     donationAsk: document.getElementById('s-donationAsk').value,
     donationAmounts: document.getElementById('s-donationAmounts').value,
-    donationLink: document.getElementById('s-donationLink').value,
+    donationLinks: {
+      5: document.getElementById('s-link5').value,
+      10: document.getElementById('s-link10').value,
+      18: document.getElementById('s-link18').value
+    },
     confirmationNote: document.getElementById('s-confirmationNote').value,
     unrecognizedReply: document.getElementById('s-unrecognizedReply').value,
   };
   try {
-    await fetch('/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(settings) });
-    currentSettings = settings;
+    await saveSettingsData(settings);
     const badge = document.getElementById('saved-badge');
     badge.classList.add('show');
-    setTimeout(() => badge.classList.remove('show'), 2500);
+    setTimeout(()=>badge.classList.remove('show'),2500);
     updatePreview();
     notify('✅ Settings saved!');
   } catch { notify('Could not save settings', true); }
 }
 
-// Init
-fetch('/settings').then(r=>r.json()).then(s=>{ currentSettings=s; updatePreview(); }).catch(()=>updatePreview());
-loadContactCount();
+// ── INIT ──────────────────────────────────────────────────
+fetch('/settings').then(r=>r.json()).then(s=>{ currentSettings=s; loadListDropdown(); updatePreview(); }).catch(()=>updatePreview());
+fetch('/contacts').then(r=>r.json()).then(c=>{ allContacts=c; loadContactCount(); }).catch(()=>{});
 </script>
 </body>
 </html>
