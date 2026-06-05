@@ -15,7 +15,7 @@
   .tabs{display:flex;background:var(--navy-mid);border-bottom:1px solid rgba(201,168,76,0.15);padding:0 32px;overflow-x:auto;}
   .tab{padding:14px 18px;font-size:13.5px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all 0.18s;white-space:nowrap;}
   .tab.active{color:var(--gold);border-bottom-color:var(--gold);}.tab:hover{color:var(--cream);}
-  .content{padding:32px;max-width:820px;margin:0 auto;}
+  .content{padding:32px;max-width:860px;margin:0 auto;}
   .page{display:none;}.page.active{display:block;}
   .card{background:var(--navy-mid);border:1px solid rgba(201,168,76,0.15);border-radius:var(--radius);padding:24px;margin-bottom:20px;}
   .card-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--gold-light);margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;}
@@ -38,6 +38,7 @@
   .btn-gold{background:var(--gold);color:var(--navy);}.btn-gold:hover{background:var(--gold-light);}
   .btn-outline{background:transparent;color:var(--gold);border:1px solid rgba(201,168,76,0.4);}.btn-outline:hover{background:rgba(201,168,76,0.1);}
   .btn-danger{background:rgba(192,57,43,0.15);color:#f87171;border:1px solid rgba(192,57,43,0.3);}
+  .btn-success{background:rgba(45,122,79,0.2);color:#4ade80;border:1px solid rgba(45,122,79,0.3);}
   .btn:disabled{opacity:0.5;cursor:not-allowed;}.btn-sm{padding:6px 13px;font-size:12.5px;}
   .preview-box{background:rgba(0,0,0,0.2);border:1px solid rgba(201,168,76,0.15);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:rgba(249,244,236,0.85);white-space:pre-wrap;}
   .notif{position:fixed;bottom:24px;right:24px;background:var(--navy-mid);border:1px solid var(--gold);border-radius:10px;padding:14px 20px;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,0.4);transform:translateY(80px);opacity:0;transition:all 0.3s;z-index:999;max-width:360px;}
@@ -58,19 +59,22 @@
   @keyframes spin{to{transform:rotate(360deg);}}
   .saved-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(45,122,79,0.2);color:#4ade80;padding:3px 10px;border-radius:20px;font-size:12px;opacity:0;transition:opacity 0.3s;}
   .saved-badge.show{opacity:1;}
-  /* Contact selector */
-  .contact-selector{max-height:260px;overflow-y:auto;border:1px solid rgba(201,168,76,0.2);border-radius:8px;background:rgba(255,255,255,0.03);}
-  .contact-item{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.15s;}
-  .contact-item:last-child{border-bottom:none;}.contact-item:hover{background:rgba(201,168,76,0.06);}
-  .contact-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--gold);}
-  .contact-name{font-size:13.5px;}.contact-phone{font-size:11.5px;color:var(--muted);}
-  .select-actions{display:flex;gap:8px;margin-bottom:8px;}
-  /* List manager */
-  .list-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
-  .list-item:last-child{border-bottom:none;}.list-item input{flex:1;}
   .send-mode-tabs{display:flex;gap:4px;background:rgba(255,255,255,0.04);border-radius:8px;padding:3px;margin-bottom:16px;}
   .send-mode-tab{flex:1;text-align:center;padding:8px;border-radius:6px;font-size:13px;cursor:pointer;color:rgba(249,244,236,0.5);transition:all 0.15s;}
   .send-mode-tab.active{background:var(--navy-light);color:var(--cream);font-weight:500;}
+  .contact-selector{max-height:280px;overflow-y:auto;border:1px solid rgba(201,168,76,0.2);border-radius:8px;background:rgba(255,255,255,0.03);}
+  .contact-item{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.15s;}
+  .contact-item:last-child{border-bottom:none;}.contact-item:hover{background:rgba(201,168,76,0.06);}
+  .contact-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--gold);}
+  .contact-name{font-size:13.5px;font-weight:500;}.contact-meta{font-size:11.5px;color:var(--muted);}
+  .list-check-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:var(--cream);}
+  .list-check-item:last-child{border-bottom:none;}
+  .list-check-item input{width:15px;height:15px;cursor:pointer;accent-color:var(--gold);}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .modal{background:var(--navy-mid);border:1px solid rgba(201,168,76,0.2);border-radius:14px;padding:28px;width:100%;max-width:460px;max-height:80vh;overflow-y:auto;}
+  .modal-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold-light);margin-bottom:20px;}
+  .list-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+  .list-item:last-child{border-bottom:none;}.list-item input{flex:1;}
 </style>
 </head>
 <body>
@@ -87,7 +91,7 @@
 </div>
 <div class="content">
 
-  <!-- BLAST TAB -->
+  <!-- ══ BLAST TAB ══ -->
   <div class="page active" id="tab-blast">
     <div class="card">
       <div class="card-title">🕯️ Event Details</div>
@@ -114,7 +118,8 @@
         <div class="send-mode-tab active" onclick="setSendMode('list',this)">📋 By List</div>
         <div class="send-mode-tab" onclick="setSendMode('individual',this)">👤 Specific People</div>
       </div>
-      <!-- List mode -->
+
+      <!-- LIST MODE -->
       <div id="send-mode-list">
         <div class="form-group">
           <label>Select Lists <span class="hint">(check one or more — duplicates removed automatically)</span></label>
@@ -122,27 +127,29 @@
         </div>
         <div id="contact-count" style="font-size:13px;color:var(--muted);margin-bottom:16px;">Loading...</div>
       </div>
-      <!-- Individual mode -->
+
+      <!-- INDIVIDUAL MODE -->
       <div id="send-mode-individual" style="display:none;">
-        <div class="form-group"><input type="text" id="contact-search" placeholder="🔍 Search by name or phone..." oninput="filterContacts()"></div>
-        <div class="select-actions">
-          <button class="btn btn-outline btn-sm" onclick="selectAllContacts()">Select All</button>
-          <button class="btn btn-outline btn-sm" onclick="deselectAllContacts()">Deselect All</button>
-          <span id="selected-count" style="font-size:13px;color:var(--muted);align-self:center;margin-left:4px;">0 selected</span>
+        <div class="form-group"><input type="text" id="contact-search" placeholder="🔍 Search by name or phone..." oninput="filterSendContacts()"></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+          <button class="btn btn-outline btn-sm" onclick="selectAllSend()">Select All</button>
+          <button class="btn btn-outline btn-sm" onclick="deselectAllSend()">Deselect All</button>
+          <span id="selected-count" style="font-size:13px;color:var(--muted);margin-left:4px;">0 selected</span>
         </div>
-        <div class="contact-selector" id="contact-selector"></div>
+        <div class="contact-selector" id="send-contact-selector"></div>
       </div>
+
       <div style="margin-top:16px;">
         <button class="btn btn-gold" onclick="sendBlast()" id="send-btn">📤 Send Blast Now</button>
       </div>
     </div>
   </div>
 
-  <!-- RSVPs TAB -->
+  <!-- ══ RSVPs TAB ══ -->
   <div class="page" id="tab-rsvps">
     <div class="card" style="padding:16px 20px;margin-bottom:16px;">
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <label style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Event</label>
+        <label style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0;">Event</label>
         <select id="event-selector" onchange="loadRsvpsForEvent(this.value)" style="flex:1;max-width:400px;"></select>
         <button class="btn btn-outline btn-sm" onclick="loadEvents()">🔄 Refresh</button>
       </div>
@@ -158,11 +165,27 @@
     </div>
   </div>
 
-  <!-- CONTACTS TAB -->
+  <!-- ══ CONTACTS TAB ══ -->
   <div class="page" id="tab-contacts">
+    <!-- Add Individual Contact -->
+    <div class="card">
+      <div class="card-title">➕ Add Individual Contact</div>
+      <div class="two-col">
+        <div class="form-group"><label>First Name</label><input type="text" id="new-first" placeholder="Yankel"></div>
+        <div class="form-group"><label>Last Name</label><input type="text" id="new-last" placeholder="Goldstein"></div>
+      </div>
+      <div class="form-group"><label>Phone Number</label><input type="text" id="new-phone" placeholder="(914) 555-0001"></div>
+      <div class="form-group">
+        <label>Add to Lists</label>
+        <div id="new-contact-lists" style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:4px 0;max-height:180px;overflow-y:auto;"></div>
+      </div>
+      <button class="btn btn-gold" onclick="addIndividualContact()">➕ Add Contact</button>
+    </div>
+
+    <!-- Import CSV -->
     <div class="card">
       <div class="card-title">⬆️ Import from CSV</div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Columns: <strong>first</strong>, <strong>last</strong> (or <strong>name</strong>), <strong>phone</strong>, <strong>list</strong> (e.g. minyan). Existing contacts are updated, not duplicated.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Columns: <strong>first</strong>, <strong>last</strong> (or <strong>name</strong>), <strong>phone</strong>, <strong>list</strong>. Existing contacts are updated, not duplicated.</p>
       <div class="upload-area" onclick="document.getElementById('csv-input').click()" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
         <div class="icon">📂</div>
         <p><strong>Click to upload</strong> or drag and drop your CSV</p>
@@ -170,14 +193,21 @@
       <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleFileSelect(event)">
       <div id="import-result" style="margin-top:14px;"></div>
     </div>
+
+    <!-- Contact List -->
     <div class="card">
-      <div class="card-title"><span>👥 All Contacts</span><button class="btn btn-outline btn-sm" onclick="loadContacts()">🔄 Refresh</button></div>
-      <div class="form-group" style="margin-bottom:12px;"><input type="text" id="contacts-search" placeholder="🔍 Search contacts..." oninput="filterContactsTable()"></div>
+      <div class="card-title">
+        <span>👥 All Contacts</span>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="contacts-search" placeholder="🔍 Search..." oninput="filterContactsTable()" style="width:200px;padding:6px 10px;font-size:13px;">
+          <button class="btn btn-outline btn-sm" onclick="loadContacts()">🔄 Refresh</button>
+        </div>
+      </div>
       <div id="contacts-table"><p style="color:var(--muted);font-size:14px;">Loading...</p></div>
     </div>
   </div>
 
-  <!-- SETTINGS TAB -->
+  <!-- ══ SETTINGS TAB ══ -->
   <div class="page" id="tab-settings">
     <div class="card">
       <div class="card-title"><span>✏️ Message Settings</span><span class="saved-badge" id="saved-badge">✅ Saved!</span></div>
@@ -187,27 +217,27 @@
       <div class="form-group"><label>No Reply Message <span class="hint">(when someone says No)</span></label><textarea id="s-noReply" rows="2"></textarea></div>
       <div class="form-group"><label>Donation Ask <span class="hint">(shown after Yes RSVP)</span></label><textarea id="s-donationAsk" rows="2"></textarea></div>
       <div class="form-group"><label>Donation Menu <span class="hint">(the options guests see)</span></label><textarea id="s-donationAmounts" rows="4"></textarea></div>
+      <div class="form-group"><label>Donation Thank You Message</label><input type="text" id="s-donationThankYou"></div>
+      <div class="form-group"><label>Card Saved Note</label><input type="text" id="s-cardSavedNote"></div>
       <div class="three-col">
-        <div class="form-group"><label>$5 Stripe Link</label><input type="text" id="s-link5" placeholder="https://buy.stripe.com/..."></div>
-        <div class="form-group"><label>$10 Stripe Link</label><input type="text" id="s-link10" placeholder="https://buy.stripe.com/..."></div>
-        <div class="form-group"><label>$18 Stripe Link</label><input type="text" id="s-link18" placeholder="https://buy.stripe.com/..."></div>
+        <div class="form-group"><label>$5 Stripe Link</label><input type="text" id="s-link5"></div>
+        <div class="form-group"><label>$10 Stripe Link</label><input type="text" id="s-link10"></div>
+        <div class="form-group"><label>$18 Stripe Link</label><input type="text" id="s-link18"></div>
       </div>
-      <div class="form-group"><label>Donation Thank You Message <span class="hint">(shown when someone donates)</span></label><input type="text" id="s-donationThankYou"></div>
-      <div class="form-group"><label>Card Saved Note <span class="hint">(shown after payment link)</span></label><input type="text" id="s-cardSavedNote"></div>
       <div class="form-group"><label>Default Confirmation Note</label><input type="text" id="s-confirmationNote"></div>
       <div class="form-group"><label>Unrecognized Reply Message</label><textarea id="s-unrecognizedReply" rows="3"></textarea></div>
       <button class="btn btn-gold" onclick="saveSettings()">💾 Save All Settings</button>
     </div>
   </div>
 
-  <!-- LISTS TAB -->
+  <!-- ══ LISTS TAB ══ -->
   <div class="page" id="tab-lists">
     <div class="card">
       <div class="card-title">🗂️ Manage Contact Lists</div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Add, rename, or remove lists. These appear in the Send Blast dropdown automatically.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Add, rename, or remove lists. These appear everywhere automatically.</p>
       <div id="lists-manager"></div>
       <div style="margin-top:16px;display:flex;gap:10px;">
-        <input type="text" id="new-list-name" placeholder="New list name (e.g. Shabbat Dinner)" style="max-width:260px;">
+        <input type="text" id="new-list-name" placeholder="New list name (e.g. Shabbat Dinner)" style="max-width:280px;">
         <button class="btn btn-gold" onclick="addList()">+ Add List</button>
       </div>
     </div>
@@ -218,20 +248,36 @@
   </div>
 
 </div>
+
+<!-- Edit Contact Lists Modal -->
+<div class="modal-overlay" id="edit-modal" style="display:none;" onclick="closeEditModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">Edit Contact Lists</div>
+    <p id="edit-modal-name" style="font-size:14px;color:var(--muted);margin-bottom:16px;"></p>
+    <div id="edit-modal-lists" style="border:1px solid rgba(201,168,76,0.2);border-radius:8px;overflow:hidden;margin-bottom:20px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-gold" onclick="saveContactLists()">💾 Save</button>
+      <button class="btn btn-outline" onclick="document.getElementById('edit-modal').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="notif" id="notif"><span id="notif-msg"></span></div>
 
 <script>
 let currentSettings = {};
 let allContacts = [];
 let sendMode = 'list';
+let editingPhone = null;
 
+// ── TABS ──────────────────────────────────────────────────
 function showTab(name, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   el.classList.add('active');
-  if (name === 'rsvps') loadRsvps();
-  if (name === 'contacts') loadContacts();
+  if (name === 'rsvps') loadEvents();
+  if (name === 'contacts') { loadContacts(); renderNewContactLists(); }
   if (name === 'settings') loadSettings();
   if (name === 'lists') loadListsTab();
   if (name === 'blast') { loadListDropdown(); loadContactCount(); }
@@ -244,34 +290,92 @@ function notify(msg, isError=false) {
   setTimeout(() => n.classList.remove('show'), 4000);
 }
 
-function setSendMode(mode, el) {
-  sendMode = mode;
-  document.querySelectorAll('.send-mode-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('send-mode-list').style.display = mode === 'list' ? 'block' : 'none';
-  document.getElementById('send-mode-individual').style.display = mode === 'individual' ? 'block' : 'none';
-  if (mode === 'individual') renderContactSelector();
+// ── SETTINGS ──────────────────────────────────────────────
+function getLists() { return currentSettings.lists || []; }
+
+async function loadSettingsData() {
+  try { const r = await fetch('/settings'); currentSettings = await r.json(); return currentSettings; }
+  catch { return {}; }
+}
+
+async function loadSettings() {
+  await loadSettingsData();
+  document.getElementById('s-botIntro').value = currentSettings.botIntro||'';
+  document.getElementById('s-rsvpPrompt').value = currentSettings.rsvpPrompt||'';
+  document.getElementById('s-noReply').value = currentSettings.noReply||'';
+  document.getElementById('s-donationAsk').value = currentSettings.donationAsk||'';
+  document.getElementById('s-donationAmounts').value = currentSettings.donationAmounts||'';
+  document.getElementById('s-donationThankYou').value = currentSettings.donationThankYou||'';
+  document.getElementById('s-cardSavedNote').value = currentSettings.cardSavedNote||'';
+  const links = currentSettings.donationLinks||{};
+  document.getElementById('s-link5').value = links[5]||'';
+  document.getElementById('s-link10').value = links[10]||'';
+  document.getElementById('s-link18').value = links[18]||'';
+  document.getElementById('s-confirmationNote').value = currentSettings.confirmationNote||'';
+  document.getElementById('s-unrecognizedReply').value = currentSettings.unrecognizedReply||'';
+  updatePreview();
+}
+
+async function saveSettingsData(partial) {
+  const merged = { ...currentSettings, ...partial };
+  const res = await fetch('/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(merged) });
+  const data = await res.json();
+  currentSettings = data.settings || merged;
+  return currentSettings;
+}
+
+async function saveSettings() {
+  const settings = {
+    botIntro: document.getElementById('s-botIntro').value,
+    rsvpPrompt: document.getElementById('s-rsvpPrompt').value,
+    noReply: document.getElementById('s-noReply').value,
+    donationAsk: document.getElementById('s-donationAsk').value,
+    donationAmounts: document.getElementById('s-donationAmounts').value,
+    donationThankYou: document.getElementById('s-donationThankYou').value,
+    cardSavedNote: document.getElementById('s-cardSavedNote').value,
+    donationLinks: {
+      5: document.getElementById('s-link5').value,
+      10: document.getElementById('s-link10').value,
+      18: document.getElementById('s-link18').value
+    },
+    confirmationNote: document.getElementById('s-confirmationNote').value,
+    unrecognizedReply: document.getElementById('s-unrecognizedReply').value,
+  };
+  try {
+    await saveSettingsData(settings);
+    const badge = document.getElementById('saved-badge');
+    badge.classList.add('show');
+    setTimeout(() => badge.classList.remove('show'), 2500);
+    updatePreview();
+    notify('✅ Settings saved!');
+  } catch { notify('Could not save settings', true); }
 }
 
 // ── LISTS ─────────────────────────────────────────────────
-function getLists() { return currentSettings.lists || []; }
-
 function loadListDropdown() {
   const lists = getLists();
   const container = document.getElementById('list-checkboxes');
   if (!container) return;
   container.innerHTML = lists.map(l => `
-    <label style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;text-transform:none;letter-spacing:0;color:var(--cream);">
-      <input type="checkbox" value="${l.id}" class="list-checkbox" onchange="loadContactCount()" style="width:15px;height:15px;accent-color:var(--gold);cursor:pointer;">
+    <label class="list-check-item">
+      <input type="checkbox" value="${l.id}" class="list-checkbox" onchange="loadContactCount()" style="width:15px;height:15px;accent-color:var(--gold);">
       ${l.name}
-      <span class="list-count-badge" id="lcount-${l.id}" style="font-size:11px;color:var(--muted);margin-left:auto;"></span>
+      <span id="lcount-${l.id}" style="font-size:11px;color:var(--muted);margin-left:auto;"></span>
     </label>`).join('');
-  // Check "All Contacts" by default if nothing selected
   const checkboxes = document.querySelectorAll('.list-checkbox');
-  if (checkboxes.length && ![...checkboxes].some(c => c.checked)) {
-    checkboxes[0].checked = true;
-  }
+  if (checkboxes.length && ![...checkboxes].some(c => c.checked)) checkboxes[0].checked = true;
   loadContactCount();
+}
+
+function renderNewContactLists() {
+  const lists = getLists().filter(l => l.id !== 'all');
+  const container = document.getElementById('new-contact-lists');
+  if (!container) return;
+  container.innerHTML = lists.map(l => `
+    <label class="list-check-item">
+      <input type="checkbox" value="${l.id}" class="new-contact-list-check" style="width:15px;height:15px;accent-color:var(--gold);">
+      ${l.name}
+    </label>`).join('');
 }
 
 async function loadListsTab() {
@@ -284,20 +388,18 @@ function renderListsManager() {
   const lists = getLists();
   const container = document.getElementById('lists-manager');
   if (!lists.length) { container.innerHTML = '<p style="color:var(--muted);">No lists yet.</p>'; return; }
-  container.innerHTML = lists.map((l, i) => `
+  container.innerHTML = lists.map(l => `
     <div class="list-item">
-      <input type="text" value="${l.name}" id="list-name-${l.id}" onchange="renameList('${l.id}', this.value)">
-      <span style="font-size:12px;color:var(--muted);min-width:80px;" id="list-count-${l.id}">loading...</span>
-      ${l.id === 'all' ? '' : `<button class="btn btn-danger btn-sm" onclick="removeList('${l.id}')">Remove</button>`}
+      <input type="text" value="${l.name}" onchange="renameList('${l.id}', this.value)">
+      <span id="lmgr-count-${l.id}" style="font-size:12px;color:var(--muted);min-width:80px;text-align:right;"></span>
+      ${l.id === 'all' ? '<span style="font-size:12px;color:var(--muted);">default</span>' : `<button class="btn btn-danger btn-sm" onclick="removeList('${l.id}')">Remove</button>`}
     </div>`).join('');
-  // Load counts
   fetch('/contacts').then(r=>r.json()).then(contacts => {
-    allContacts = contacts;
     lists.forEach(l => {
-      const el = document.getElementById('list-count-' + l.id);
+      const el = document.getElementById('lmgr-count-' + l.id);
       if (el) {
-        const count = l.id === 'all' ? contacts.length : contacts.filter(c => c.lists?.includes(l.id)).length;
-        el.textContent = `${count} contact${count !== 1 ? 's' : ''}`;
+        const n = l.id === 'all' ? contacts.length : contacts.filter(c => c.lists?.includes(l.id)).length;
+        el.textContent = n + ' contacts';
       }
     });
   }).catch(() => {});
@@ -305,14 +407,12 @@ function renderListsManager() {
 
 function renderListSummary() {
   fetch('/contacts').then(r=>r.json()).then(contacts => {
-    const lists = getLists().filter(l => l.id !== 'all');
+    const lists = getLists();
     let html = '<table><thead><tr><th>List</th><th>Contacts</th></tr></thead><tbody>';
     lists.forEach(l => {
-      const count = contacts.filter(c => c.lists?.includes(l.id)).length;
-      html += `<tr><td>${l.name}</td><td>${count}</td></tr>`;
+      const n = l.id === 'all' ? contacts.length : contacts.filter(c => c.lists?.includes(l.id)).length;
+      html += `<tr><td>${l.name}</td><td>${n}</td></tr>`;
     });
-    const unassigned = contacts.filter(c => !c.lists?.length || c.lists.every(x => x === 'all')).length;
-    if (unassigned) html += `<tr><td style="color:var(--muted);">Unassigned</td><td>${unassigned}</td></tr>`;
     html += '</tbody></table>';
     document.getElementById('list-summary').innerHTML = html;
   }).catch(() => { document.getElementById('list-summary').innerHTML = '<p style="color:#f87171;">Could not load.</p>'; });
@@ -329,7 +429,9 @@ async function addList() {
   await saveSettingsData({ lists });
   nameInput.value = '';
   renderListsManager();
+  renderListSummary();
   loadListDropdown();
+  renderNewContactLists();
   notify(`✅ "${name}" list added!`);
 }
 
@@ -340,11 +442,13 @@ async function renameList(id, newName) {
 }
 
 async function removeList(id) {
-  if (!confirm('Remove this list? Contacts in it will not be deleted.')) return;
+  if (!confirm('Remove this list? Contacts will not be deleted.')) return;
   const lists = getLists().filter(l => l.id !== id);
   await saveSettingsData({ lists });
   renderListsManager();
+  renderListSummary();
   loadListDropdown();
+  renderNewContactLists();
   notify('List removed.');
 }
 
@@ -359,89 +463,134 @@ async function loadContacts() {
 
 function renderContactsTable(contacts) {
   if (!contacts.length) { document.getElementById('contacts-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No contacts yet.</p>'; return; }
-  const lists = getLists().filter(l => l.id !== 'all');
-  let html = `<p style="font-size:13px;color:var(--muted);margin-bottom:10px;">${contacts.length} contact${contacts.length !== 1 ? 's' : ''}</p>`;
-  html += '<table><thead><tr><th>Name</th><th>Phone</th><th>Lists</th><th>Edit</th></tr></thead><tbody>';
+  let html = `<p style="font-size:13px;color:var(--muted);margin-bottom:10px;">${contacts.length} contact${contacts.length!==1?'s':''}</p>`;
+  html += '<table><thead><tr><th>Name</th><th>Phone</th><th>Lists</th><th></th></tr></thead><tbody>';
   for (const c of contacts) {
-    const currentLists = (c.lists||[]).filter(l=>l!=='all').join(', ') || '—';
+    const lists = (c.lists||[]).filter(l=>l!=='all');
+    const listNames = lists.map(lid => { const l = getLists().find(x=>x.id===lid); return l ? l.name : lid; }).join(', ') || '—';
     const phone = encodeURIComponent(c.phone);
-    const listOptions = lists.map(l => `<option value="${l.id}" ${(c.lists||[]).includes(l.id)?'selected':''}>${l.name}</option>`).join('');
     html += `<tr>
       <td>${c.name||'—'}</td>
       <td style="font-size:12px;">${c.phone}</td>
-      <td style="font-size:12px;">${currentLists}</td>
-      <td>
-        <select id="list-sel-${phone}" style="padding:4px 8px;font-size:12px;width:auto;" multiple>
-          ${listOptions}
-        </select>
-        <button class="btn btn-outline btn-sm" style="padding:4px 10px;font-size:11px;margin-left:4px;" onclick="updateContactList('${phone}')">Save</button>
-      </td>
+      <td style="font-size:12px;">${listNames}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="openEditModal('${phone}','${(c.name||'').replace(/'/g,"\\'")}')">Edit Lists</button></td>
     </tr>`;
   }
   html += '</tbody></table>';
   document.getElementById('contacts-table').innerHTML = html;
 }
 
-async function updateContactList(encodedPhone) {
-  const sel = document.getElementById('list-sel-' + encodedPhone);
-  const selected = [...sel.selectedOptions].map(o => o.value);
-  if (!selected.length) { notify('Please select at least one list', true); return; }
+function filterContactsTable() {
+  const q = document.getElementById('contacts-search').value.toLowerCase();
+  renderContactsTable(allContacts.filter(c => (c.name||'').toLowerCase().includes(q) || c.phone.includes(q)));
+}
+
+async function addIndividualContact() {
+  const first = document.getElementById('new-first').value.trim();
+  const last = document.getElementById('new-last').value.trim();
+  const phone = document.getElementById('new-phone').value.trim();
+  if (!first || !phone) { notify('Please enter at least a first name and phone number', true); return; }
+  const name = [first, last].filter(Boolean).join(' ');
+  const selected = [...document.querySelectorAll('.new-contact-list-check:checked')].map(c => c.value);
+  const lists = selected.length ? selected : ['all'];
   try {
-    const phone = decodeURIComponent(encodedPhone);
-    await fetch('/contacts/' + encodedPhone, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ lists: selected }) });
-    notify('✅ Contact updated!');
+    await fetch('/contacts', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ phone, name, lists }) });
+    document.getElementById('new-first').value = '';
+    document.getElementById('new-last').value = '';
+    document.getElementById('new-phone').value = '';
+    document.querySelectorAll('.new-contact-list-check').forEach(c => c.checked = false);
+    notify(`✅ ${name} added!`);
+    loadContacts();
+    loadContactCount();
+  } catch { notify('Could not add contact', true); }
+}
+
+// Edit contact lists modal
+function openEditModal(encodedPhone, name) {
+  editingPhone = decodeURIComponent(encodedPhone);
+  document.getElementById('edit-modal-name').textContent = name + ' · ' + editingPhone;
+  const contact = allContacts.find(c => c.phone === editingPhone);
+  const currentLists = contact?.lists || [];
+  const lists = getLists().filter(l => l.id !== 'all');
+  document.getElementById('edit-modal-lists').innerHTML = lists.map(l => `
+    <label class="list-check-item">
+      <input type="checkbox" value="${l.id}" class="edit-list-check" style="width:15px;height:15px;accent-color:var(--gold);" ${currentLists.includes(l.id)?'checked':''}>
+      ${l.name}
+    </label>`).join('');
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+
+function closeEditModal(e) {
+  if (e.target === document.getElementById('edit-modal')) document.getElementById('edit-modal').style.display = 'none';
+}
+
+async function saveContactLists() {
+  const selected = [...document.querySelectorAll('.edit-list-check:checked')].map(c => c.value);
+  const lists = selected.length ? selected : ['all'];
+  try {
+    await fetch('/contacts/' + encodeURIComponent(editingPhone), { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ lists }) });
+    document.getElementById('edit-modal').style.display = 'none';
+    notify('✅ Contact lists updated!');
     loadContacts();
     loadContactCount();
   } catch { notify('Could not update contact', true); }
 }
 
-function filterContactsTable() {
-  const q = document.getElementById('contacts-search').value.toLowerCase();
-  const filtered = allContacts.filter(c => (c.name||'').toLowerCase().includes(q) || c.phone.includes(q));
-  renderContactsTable(filtered);
+// ── SEND BLAST ─────────────────────────────────────────────
+function setSendMode(mode, el) {
+  sendMode = mode;
+  document.querySelectorAll('.send-mode-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('send-mode-list').style.display = mode === 'list' ? 'block' : 'none';
+  document.getElementById('send-mode-individual').style.display = mode === 'individual' ? 'block' : 'none';
+  if (mode === 'individual') renderSendContactSelector();
 }
 
-function renderContactSelector() {
-  const container = document.getElementById('contact-selector');
+function renderSendContactSelector() {
+  const container = document.getElementById('send-contact-selector');
   if (!allContacts.length) {
-    fetch('/contacts').then(r=>r.json()).then(c => { allContacts = c; renderContactSelector(); });
+    fetch('/contacts').then(r=>r.json()).then(c => { allContacts = c; renderSendContactSelector(); });
     return;
   }
-  container.innerHTML = allContacts.map(c => `
-    <div class="contact-item" onclick="toggleContact('${c.phone}')">
-      <input type="checkbox" id="chk-${c.phone}" value="${c.phone}">
-      <div><div class="contact-name">${c.name||'Unknown'}</div><div class="contact-phone">${c.phone} · ${(c.lists||[]).join(', ')}</div></div>
-    </div>`).join('');
+  container.innerHTML = allContacts.map(c => {
+    const lists = (c.lists||[]).filter(l=>l!=='all').map(lid => { const l = getLists().find(x=>x.id===lid); return l?l.name:lid; }).join(', ');
+    return `<div class="contact-item" onclick="toggleSendContact('${encodeURIComponent(c.phone)}')">
+      <input type="checkbox" id="schk-${encodeURIComponent(c.phone)}" value="${c.phone}">
+      <div><div class="contact-name">${c.name||'Unknown'}</div><div class="contact-meta">${c.phone}${lists?' · '+lists:''}</div></div>
+    </div>`;
+  }).join('');
   updateSelectedCount();
 }
 
-function toggleContact(phone) {
-  const chk = document.getElementById('chk-' + phone);
-  chk.checked = !chk.checked;
-  updateSelectedCount();
+function toggleSendContact(encodedPhone) {
+  const chk = document.getElementById('schk-' + encodedPhone);
+  if (chk) { chk.checked = !chk.checked; updateSelectedCount(); }
 }
 
 function updateSelectedCount() {
-  const count = document.querySelectorAll('#contact-selector input:checked').length;
-  document.getElementById('selected-count').textContent = `${count} selected`;
+  const n = document.querySelectorAll('#send-contact-selector input:checked').length;
+  document.getElementById('selected-count').textContent = n + ' selected';
 }
 
-function selectAllContacts() {
-  document.querySelectorAll('#contact-selector input[type=checkbox]').forEach(c => c.checked = true);
-  updateSelectedCount();
-}
+function selectAllSend() { document.querySelectorAll('#send-contact-selector input').forEach(c=>c.checked=true); updateSelectedCount(); }
+function deselectAllSend() { document.querySelectorAll('#send-contact-selector input').forEach(c=>c.checked=false); updateSelectedCount(); }
 
-function deselectAllContacts() {
-  document.querySelectorAll('#contact-selector input[type=checkbox]').forEach(c => c.checked = false);
-  updateSelectedCount();
-}
-
-function filterContacts() {
+function filterSendContacts() {
   const q = document.getElementById('contact-search').value.toLowerCase();
-  document.querySelectorAll('.contact-item').forEach(item => {
-    const text = item.textContent.toLowerCase();
-    item.style.display = text.includes(q) ? 'flex' : 'none';
+  document.querySelectorAll('#send-contact-selector .contact-item').forEach(item => {
+    item.style.display = item.textContent.toLowerCase().includes(q) ? 'flex' : 'none';
   });
+}
+
+function getSelectedPhones(contacts, selectedLists) {
+  if (!selectedLists.length) return [];
+  const seen = new Set(); const phones = [];
+  for (const c of contacts) {
+    if (selectedLists.includes('all') || (c.lists||[]).some(l => selectedLists.includes(l))) {
+      if (!seen.has(c.phone)) { seen.add(c.phone); phones.push(c.phone); }
+    }
+  }
+  return phones;
 }
 
 async function loadContactCount() {
@@ -449,42 +598,24 @@ async function loadContactCount() {
     const res = await fetch('/contacts');
     const contacts = await res.json();
     allContacts = contacts;
-    // Update per-list counts
     getLists().forEach(l => {
       const el = document.getElementById('lcount-' + l.id);
-      if (el) {
-        const n = l.id === 'all' ? contacts.length : contacts.filter(c => c.lists?.includes(l.id)).length;
-        el.textContent = n + ' contacts';
-      }
+      if (el) { const n = l.id==='all'?contacts.length:contacts.filter(c=>c.lists?.includes(l.id)).length; el.textContent = n+' contacts'; }
     });
-    // Get selected lists
     const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
     const phones = getSelectedPhones(contacts, selected);
-    document.getElementById('contact-count').textContent = `${phones.length} unique contact${phones.length !== 1 ? 's' : ''} will receive this message`;
+    document.getElementById('contact-count').textContent = `${phones.length} unique contact${phones.length!==1?'s':''} will receive this message`;
   } catch { document.getElementById('contact-count').textContent = 'Could not load count'; }
 }
 
-function getSelectedPhones(contacts, selectedLists) {
-  if (!selectedLists.length) return [];
-  const seen = new Set();
-  const phones = [];
-  for (const c of contacts) {
-    if (selectedLists.includes('all') || (c.lists || []).some(l => selectedLists.includes(l))) {
-      if (!seen.has(c.phone)) { seen.add(c.phone); phones.push(c.phone); }
-    }
-  }
-  return phones;
-}
-
-// ── BLAST ─────────────────────────────────────────────────
 function updatePreview() {
   const name = document.getElementById('evt-name').value || '[Event Name]';
   const date = document.getElementById('evt-date').value || '[Date]';
   const time = document.getElementById('evt-time').value || '[Time]';
   const msg = document.getElementById('evt-msg').value;
-  const intro = currentSettings.botIntro || "Hi! This is Rabbi Benjy's new texting bot 🤖\n(yes, the Rabbi has been having a little too much fun with AI lately 😄)";
+  const intro = currentSettings.botIntro || "This is Rabbi Benjy's new texting bot 🤖\n(yes, the Rabbi has been having a little too much fun with AI lately 😄)";
   const prompt = currentSettings.rsvpPrompt || "Please reply with just a number:\n1 — I'll be there 🙏\n2 — Can't make it this time";
-  let preview = `${intro}\n\nWill you be joining us for ${name} ${date} @ ${time}?`;
+  let preview = `Hi [First Name]! ${intro}\n\nWill you be joining us for ${name} ${date} @ ${time}?`;
   if (msg) preview += `\n\n${msg}`;
   preview += `\n\n${prompt}`;
   document.getElementById('preview').textContent = preview;
@@ -502,11 +633,11 @@ async function sendBlast() {
   let phones = [];
   if (sendMode === 'list') {
     const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
-    if (!selected.length) { notify('Please select at least one list.', true); btn.disabled=false; btn.innerHTML='📤 Send Blast Now'; return; }
+    if (!selected.length) { notify('Please select at least one list.', true); return; }
     const contacts = await fetch('/contacts').then(r=>r.json());
     phones = getSelectedPhones(contacts, selected);
   } else {
-    phones = [...document.querySelectorAll('#contact-selector input:checked')].map(c=>c.value);
+    phones = [...document.querySelectorAll('#send-contact-selector input:checked')].map(c => c.value);
   }
   if (!phones.length) { notify('No contacts selected.', true); return; }
   const btn = document.getElementById('send-btn');
@@ -520,24 +651,15 @@ async function sendBlast() {
 }
 
 // ── RSVPs ─────────────────────────────────────────────────
-async function loadRsvps() { await loadEvents(); }
-
 async function loadEvents() {
   try {
     const res = await fetch('/events');
     const events = await res.json();
     const sel = document.getElementById('event-selector');
-    if (!events.length) {
-      sel.innerHTML = '<option value="">No events yet</option>';
-      document.getElementById('rsvp-table').innerHTML = '<p style="color:var(--muted);padding:16px 0;">No events yet. Send a blast first!</p>';
-      return;
-    }
+    if (!events.length) { sel.innerHTML='<option value="">No events yet</option>'; document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No events yet. Send a blast first!</p>'; return; }
     sel.innerHTML = events.map(e => `<option value="${e.id}">${e.name} — ${e.date} @ ${e.time}</option>`).join('');
     loadRsvpsForEvent(events[0].id);
-  } catch(err) {
-    console.error('Could not load events', err);
-    document.getElementById('rsvp-table').innerHTML = '<p style="color:#f87171;">Could not load events.</p>';
-  }
+  } catch(err) { document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load events.</p>'; }
 }
 
 async function loadRsvpsForEvent(eventId) {
@@ -546,30 +668,21 @@ async function loadRsvpsForEvent(eventId) {
     const res = await fetch('/rsvps/' + eventId);
     const rsvps = await res.json();
     const sel = document.getElementById('event-selector');
-    const selectedText = sel.options[sel.selectedIndex]?.text || 'Event';
-    document.getElementById('rsvp-title').textContent = '📋 ' + selectedText;
-    if (!rsvps.length) {
-      document.getElementById('stat-yes').textContent = '0';
-      document.getElementById('stat-no').textContent = '0';
-      document.getElementById('stat-donations').textContent = '$0';
-      document.getElementById('rsvp-table').innerHTML = '<p style="color:var(--muted);padding:16px 0;">No RSVPs yet for this event.</p>';
-      return;
-    }
-    const yes = rsvps.filter(r => r.status === 'yes').length;
-    const no = rsvps.filter(r => r.status === 'no').length;
-    const donations = rsvps.reduce((s, r) => s + (r.donationAmount || 0), 0);
-    document.getElementById('stat-yes').textContent = yes;
-    document.getElementById('stat-no').textContent = no;
+    document.getElementById('rsvp-title').textContent = '📋 ' + (sel.options[sel.selectedIndex]?.text || 'Event');
+    if (!rsvps.length) { ['stat-yes','stat-no','stat-donations'].forEach(id=>document.getElementById(id).textContent=id==='stat-donations'?'$0':'0'); document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No RSVPs yet.</p>'; return; }
+    document.getElementById('stat-yes').textContent = rsvps.filter(r=>r.status==='yes').length;
+    document.getElementById('stat-no').textContent = rsvps.filter(r=>r.status==='no').length;
+    const donations = rsvps.reduce((s,r)=>s+(r.donationAmount||0),0);
     document.getElementById('stat-donations').textContent = donations ? `$${donations}` : '$0';
-    let html = '<table><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th><th>Donation</th></tr></thead><tbody>';
-    for (const r of rsvps) {
-      const badge = r.status === 'yes' ? 'badge-yes' : r.status === 'no' ? 'badge-no' : '';
-      const label = r.status === 'yes' ? '✓ Yes' : r.status === 'no' ? '✗ No' : '⏳';
-      html += `<tr><td>${r.name||'—'}</td><td>${r.phone}</td><td><span class="badge ${badge}">${label}</span></td><td>${r.guestCount||'—'}</td><td>${r.donationAmount?'$'+r.donationAmount:'—'}</td></tr>`;
+    let html='<table><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th><th>Donation</th></tr></thead><tbody>';
+    for(const r of rsvps){
+      const badge=r.status==='yes'?'badge-yes':r.status==='no'?'badge-no':'';
+      const label=r.status==='yes'?'✓ Yes':r.status==='no'?'✗ No':'⏳';
+      html+=`<tr><td>${r.name||'—'}</td><td>${r.phone}</td><td><span class="badge ${badge}">${label}</span></td><td>${r.guestCount||'—'}</td><td>${r.donationAmount?'$'+r.donationAmount:'—'}</td></tr>`;
     }
-    html += '</tbody></table>';
-    document.getElementById('rsvp-table').innerHTML = html;
-  } catch { document.getElementById('rsvp-table').innerHTML = '<p style="color:#f87171;">Could not load RSVPs.</p>'; }
+    html+='</tbody></table>';
+    document.getElementById('rsvp-table').innerHTML=html;
+  } catch { document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load RSVPs.</p>'; }
 }
 
 // ── FILE UPLOAD ───────────────────────────────────────────
@@ -590,70 +703,17 @@ function processCSV(file){
   reader.readAsText(file);
 }
 
-// ── SETTINGS ──────────────────────────────────────────────
-async function loadSettingsData() {
-  try {
-    const res = await fetch('/settings');
-    currentSettings = await res.json();
-    return currentSettings;
-  } catch { return {}; }
-}
-
-async function loadSettings() {
-  await loadSettingsData();
-  document.getElementById('s-botIntro').value = currentSettings.botIntro||'';
-  document.getElementById('s-rsvpPrompt').value = currentSettings.rsvpPrompt||'';
-  document.getElementById('s-noReply').value = currentSettings.noReply||'';
-  document.getElementById('s-donationAsk').value = currentSettings.donationAsk||'';
-  document.getElementById('s-donationAmounts').value = currentSettings.donationAmounts||'';
-  const links = currentSettings.donationLinks||{};
-  document.getElementById('s-link5').value = links[5]||'';
-  document.getElementById('s-link10').value = links[10]||'';
-  document.getElementById('s-link18').value = links[18]||'';
-  document.getElementById('s-donationThankYou').value = currentSettings.donationThankYou||'';
-  document.getElementById('s-cardSavedNote').value = currentSettings.cardSavedNote||'';
-  document.getElementById('s-confirmationNote').value = currentSettings.confirmationNote||'';
-  document.getElementById('s-unrecognizedReply').value = currentSettings.unrecognizedReply||'';
-  updatePreview();
-}
-
-async function saveSettingsData(partial) {
-  const merged = { ...currentSettings, ...partial };
-  const res = await fetch('/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(merged) });
-  currentSettings = (await res.json()).settings || merged;
-  return currentSettings;
-}
-
-async function saveSettings() {
-  const settings = {
-    botIntro: document.getElementById('s-botIntro').value,
-    rsvpPrompt: document.getElementById('s-rsvpPrompt').value,
-    noReply: document.getElementById('s-noReply').value,
-    donationAsk: document.getElementById('s-donationAsk').value,
-    donationAmounts: document.getElementById('s-donationAmounts').value,
-    donationLinks: {
-      5: document.getElementById('s-link5').value,
-      10: document.getElementById('s-link10').value,
-      18: document.getElementById('s-link18').value
-    },
-    donationThankYou: document.getElementById('s-donationThankYou').value,
-      cardSavedNote: document.getElementById('s-cardSavedNote').value,
-      confirmationNote: document.getElementById('s-confirmationNote').value,
-    unrecognizedReply: document.getElementById('s-unrecognizedReply').value,
-  };
-  try {
-    await saveSettingsData(settings);
-    const badge = document.getElementById('saved-badge');
-    badge.classList.add('show');
-    setTimeout(()=>badge.classList.remove('show'),2500);
-    updatePreview();
-    notify('✅ Settings saved!');
-  } catch { notify('Could not save settings', true); }
-}
-
 // ── INIT ──────────────────────────────────────────────────
-fetch('/settings').then(r=>r.json()).then(s=>{ currentSettings=s; loadListDropdown(); updatePreview(); }).catch(()=>updatePreview());
-fetch('/contacts').then(r=>r.json()).then(c=>{ allContacts=c; loadContactCount(); }).catch(()=>{});
+fetch('/settings').then(r=>r.json()).then(s=>{
+  currentSettings=s;
+  loadListDropdown();
+  updatePreview();
+}).catch(()=>updatePreview());
+
+fetch('/contacts').then(r=>r.json()).then(c=>{
+  allContacts=c;
+  loadContactCount();
+}).catch(()=>{});
 </script>
 </body>
 </html>
