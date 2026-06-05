@@ -105,8 +105,30 @@
     </div>
     <div class="card">
       <div class="card-title">⚙️ Options</div>
-      <div class="toggle-row"><div><div style="font-size:14px;">Ask for donation</div><div style="font-size:12px;color:var(--muted);">Offer $5, $10, $18 after RSVP</div></div><div class="toggle on" id="tog-donation" onclick="this.classList.toggle('on')"></div></div>
+      <div class="toggle-row"><div><div style="font-size:14px;">Ask for donation</div><div style="font-size:12px;color:var(--muted);">Offer donation options after RSVP</div></div><div class="toggle on" id="tog-donation" onclick="this.classList.toggle('on');toggleDonationSettings()"></div></div>
       <div class="toggle-row"><div><div style="font-size:14px;">Ask headcount</div><div style="font-size:12px;color:var(--muted);">How many people joining?</div></div><div class="toggle" id="tog-headcount" onclick="this.classList.toggle('on')"></div></div>
+
+      <!-- Per-event donation settings -->
+      <div id="donation-settings" style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Donation Settings for This Event</p>
+
+        <div class="toggle-row" style="padding:8px 0;">
+          <div><div style="font-size:13.5px;">Preset amounts</div><div style="font-size:12px;color:var(--muted);">Show fixed options (e.g. $5 / $10 / $18)</div></div>
+          <div class="toggle on" id="tog-preset" onclick="this.classList.toggle('on');togglePresetAmounts()"></div>
+        </div>
+        <div id="preset-amounts-row" style="margin:10px 0 4px;">
+          <div class="three-col">
+            <div class="form-group"><label>Amount 1</label><input type="number" id="amt1" value="5" placeholder="5" min="1"></div>
+            <div class="form-group"><label>Amount 2</label><input type="number" id="amt2" value="10" placeholder="10" min="1"></div>
+            <div class="form-group"><label>Amount 3 <span class="hint">(Chai)</span></label><input type="number" id="amt3" value="18" placeholder="18" min="1"></div>
+          </div>
+        </div>
+
+        <div class="toggle-row" style="padding:8px 0;">
+          <div><div style="font-size:13.5px;">Free-form amount</div><div style="font-size:12px;color:var(--muted);">Guest can type any amount they choose</div></div>
+          <div class="toggle on" id="tog-freeform" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
     </div>
     <div class="card">
       <div class="card-title">📱 Message Preview</div>
@@ -176,8 +198,12 @@
       </div>
       <div class="form-group"><label>Phone Number</label><input type="text" id="new-phone" placeholder="(914) 555-0001"></div>
       <div class="form-group">
-        <label>Add to Lists</label>
-        <div id="new-contact-lists" style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:4px 0;max-height:180px;overflow-y:auto;"></div>
+        <label>Add to Lists <span class="hint">(check existing or type a new list name)</span></label>
+        <div id="new-contact-lists" style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:4px 0;max-height:200px;overflow-y:auto;"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <input type="text" id="new-list-inline" placeholder="Or type a new list name and press Enter..." style="font-size:13px;" onkeydown="if(event.key==='Enter'){createAndSelectList();event.preventDefault();}">
+          <button class="btn btn-outline btn-sm" onclick="createAndSelectList()">+ Create List</button>
+        </div>
       </div>
       <button class="btn btn-gold" onclick="addIndividualContact()">➕ Add Contact</button>
     </div>
@@ -485,11 +511,37 @@ function filterContactsTable() {
   renderContactsTable(allContacts.filter(c => (c.name||'').toLowerCase().includes(q) || c.phone.includes(q)));
 }
 
+async function createAndSelectList() {
+  const input = document.getElementById('new-list-inline');
+  const name = input.value.trim();
+  if (!name) return;
+  const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const lists = getLists();
+  // Add list if it doesn't exist
+  if (!lists.find(l => l.id === id)) {
+    lists.push({ id, name });
+    await saveSettingsData({ lists });
+    notify(`✅ List "${name}" created!`);
+  }
+  // Refresh the checkboxes and check the new one
+  renderNewContactLists();
+  setTimeout(() => {
+    const chk = document.querySelector(`.new-contact-list-check[value="${id}"]`);
+    if (chk) chk.checked = true;
+  }, 50);
+  input.value = '';
+  // Also refresh lists tab if open
+  loadListDropdown();
+}
+
 async function addIndividualContact() {
   const first = document.getElementById('new-first').value.trim();
   const last = document.getElementById('new-last').value.trim();
   const phone = document.getElementById('new-phone').value.trim();
   if (!first || !phone) { notify('Please enter at least a first name and phone number', true); return; }
+  // If there's text in the inline list field, create that list first
+  const inlineList = document.getElementById('new-list-inline').value.trim();
+  if (inlineList) await createAndSelectList();
   const name = [first, last].filter(Boolean).join(' ');
   const selected = [...document.querySelectorAll('.new-contact-list-check:checked')].map(c => c.value);
   const lists = selected.length ? selected : ['all'];
@@ -498,6 +550,7 @@ async function addIndividualContact() {
     document.getElementById('new-first').value = '';
     document.getElementById('new-last').value = '';
     document.getElementById('new-phone').value = '';
+    document.getElementById('new-list-inline').value = '';
     document.querySelectorAll('.new-contact-list-check').forEach(c => c.checked = false);
     notify(`✅ ${name} added!`);
     loadContacts();
@@ -534,6 +587,16 @@ async function saveContactLists() {
     loadContacts();
     loadContactCount();
   } catch { notify('Could not update contact', true); }
+}
+
+// ── DONATION SETTINGS ─────────────────────────────────────
+function toggleDonationSettings() {
+  const on = document.getElementById('tog-donation').classList.contains('on');
+  document.getElementById('donation-settings').style.display = on ? 'block' : 'none';
+}
+function togglePresetAmounts() {
+  const on = document.getElementById('tog-preset').classList.contains('on');
+  document.getElementById('preset-amounts-row').style.display = on ? 'block' : 'none';
 }
 
 // ── SEND BLAST ─────────────────────────────────────────────
@@ -630,6 +693,13 @@ async function sendBlast() {
   const confirmationNote = document.getElementById('evt-confirm').value;
   const askDonation = document.getElementById('tog-donation').classList.contains('on');
   const askHeadcount = document.getElementById('tog-headcount').classList.contains('on');
+  const usePreset = document.getElementById('tog-preset').classList.contains('on');
+  const useFreeform = document.getElementById('tog-freeform').classList.contains('on');
+  const donationAmounts = usePreset ? [
+    parseInt(document.getElementById('amt1').value)||5,
+    parseInt(document.getElementById('amt2').value)||10,
+    parseInt(document.getElementById('amt3').value)||18,
+  ] : [];
   let phones = [];
   if (sendMode === 'list') {
     const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
@@ -643,7 +713,7 @@ async function sendBlast() {
   const btn = document.getElementById('send-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending...';
   try {
-    const res = await fetch('/blast', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ event:{name,date,time,customMessage,confirmationNote,askDonation,askHeadcount}, phones }) });
+    const res = await fetch('/blast', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ event:{name,date,time,customMessage,confirmationNote,askDonation,askHeadcount,donationAmounts,useFreeform}, phones }) });
     const data = await res.json();
     notify(`✅ Sent to ${data.sent} contact${data.sent!==1?'s':''}!${data.failed>0?` (${data.failed} failed)`:''}`);
   } catch(err) { notify('Error: '+err.message, true); }
