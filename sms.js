@@ -21,16 +21,50 @@ function parseYesNo(msg) {
   return null;
 }
 
-function parseDonation(msg) {
+function parseDonation(msg, event) {
   const m = msg.toLowerCase().trim();
-  if (m === '1' || m === '$5' || m === '5') return 5;
-  if (m === '2' || m === '$10' || m === '10') return 10;
-  if (m === '3' || m === '$18' || m === '18' || m === 'chai') return 18;
+  const amounts = event?.donationAmounts || [5, 10, 18];
+
+  // Skip signals
   const skipWords = ['n','no','skip','pass','next time','not now','nope'];
   for (const w of skipWords) { if (m === w || m.includes(w)) return 'skip'; }
-  const num = parseFloat(msg.replace(/[$,\s]/g, ''));
-  if (!isNaN(num) && num > 0 && num <= 10000) return Math.round(num * 100) / 100;
+
+  // Preset number replies (1, 2, 3)
+  if (m === '1' && amounts[0]) return amounts[0];
+  if (m === '2' && amounts[1]) return amounts[1];
+  if (m === '3' && amounts[2]) return amounts[2];
+
+  // Direct amount match against preset amounts
+  for (const amt of amounts) {
+    if (m === `$${amt}` || m === `${amt}`) return amt;
+  }
+
+  // Free-form — any dollar amount
+  const cleaned = msg.replace(/[$,\s]/g, '');
+  const num = parseFloat(cleaned);
+  if (!isNaN(num) && num > 0 && num <= 100000) return Math.round(num * 100) / 100;
+
   return null;
+}
+
+function buildDonationMenu(event, s) {
+  const amounts = event?.donationAmounts || [5, 10, 18];
+  const usePreset = !event?.donationAmounts || event.donationAmounts.length > 0;
+  const useFreeform = event?.useFreeform !== false; // default true
+  const usePresetToggle = event?.donationAmounts !== null && amounts.length > 0;
+
+  let menu = '';
+  if (usePresetToggle) {
+    amounts.forEach((amt, i) => {
+      const label = amt === 18 ? `$18 (Chai ✡️)` : `$${amt}`;
+      menu += `${i + 1} — ${label}\n`;
+    });
+  }
+  if (useFreeform) {
+    menu += `Or reply with any amount (e.g. $36)\n`;
+  }
+  menu += `N — No thank you`;
+  return menu;
 }
 
 async function handleIncoming(from, body) {
@@ -88,16 +122,38 @@ async function handleHeadcount(phone, msg, contact, conv, s) {
 
 async function startDonationFlow(phone, contact, event, s) {
   db.saveConversation(phone, { step: 'await_donation_decision', eventId: event.id });
-  return `${personalize(s.donationAsk, contact)}\n\n${s.donationAmounts}`;
+  const menu = buildDonationMenu(event, s);
+  return `${personalize(s.donationAsk, contact)}\n\n${menu}`;
 }
 
 async function handleDonationDecision(phone, msg, contact, conv, s) {
   const event = db.getEvent(conv.eventId);
-  const amount = parseDonation(msg);
-  if (amount === 'skip') { db.clearConversation(phone); return confirmationMessage(event, s, contact); }
-  if (amount === null) return `Please reply with 1 ($5), 2 ($10), 3 ($18 Chai), or N to skip.`;
+  const amount = parseDonation(msg, event);
+
+  if (amount === 'skip') {
+    db.clearConversation(phone);
+    return confirmationMessage(event, s, contact);
+  }
+
+  if (amount === null) {
+    const menu = buildDonationMenu(event, s);
+    return `I didn't quite catch that. Please reply with a number from the options below or type any amount:\n\n${menu}`;
+  }
+
+  // Get the right Stripe link
   const links = s.donationLinks || {};
-  const link = links[amount] || links[5] || 'https://chabadrt.org/donate';
+  const presetAmounts = event?.donationAmounts || [5, 10, 18];
+  let link;
+
+  if (presetAmounts.includes(amount) && links[amount]) {
+    // Use the specific preset Stripe link
+    link = links[amount];
+  } else {
+    // Free-form amount — generate a dynamic Stripe link
+    const { createPaymentLink } = require('./payments');
+    link = await createPaymentLink(amount, event?.name || 'Chabad Event');
+  }
+
   db.saveRsvp(conv.eventId, phone, { donationAmount: amount });
   db.clearConversation(phone);
   return `${s.donationThankYou}\n🔗 ${link}\n\n${s.cardSavedNote}\n\n${confirmationMessage(event, s, contact)}`;
