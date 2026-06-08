@@ -6,21 +6,81 @@ const fs = require('fs');
 const { handleIncoming } = require('./sms');
 const { importContacts } = require('./import');
 const { getSettings, saveSettings } = require('./settings');
+const { getDonationConfirmationText } = require('./payments');
 const db = require('./db');
 
 const app = express();
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
 
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-// ── HEALTH CHECK ──────────────────────────────────────────
+// ── STRIPE WEBHOOK (must come BEFORE express.json()) ──────────
+// Stripe needs the raw request body to verify the signature.
+app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error(`[WEBHOOK] Signature failed: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const phone = session.metadata?.phone;
+    const amount = session.metadata?.amount || (session.amount_total / 100);
+
+    console.log(`[WEBHOOK] Payment complete — phone: ${phone}, amount: $${amount}`);
+
+    // Send confirmation SMS to donor
+    if (phone) {
+      try {
+        const contact = db.getContact(phone);
+        const name = contact?.name ? contact.name.split(' ')[0] : null;
+        const confirmText = await getDonationConfirmationText(amount, name);
+        await twilioClient.messages.create({
+          body: confirmText,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: phone
+        });
+        console.log(`[WEBHOOK] Confirmation SMS sent to ${phone}`);
+      } catch (smsErr) {
+        console.error(`[WEBHOOK] Confirmation SMS failed:`, smsErr.message);
+      }
+    }
+
+    // Notify admin
+    if (process.env.ADMIN_PHONE) {
+      try {
+        const contact = db.getContact(phone);
+        const name = contact?.name || phone;
+        await twilioClient.messages.create({
+          body: `💰 Donation received: $${amount} from ${name}`,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: process.env.ADMIN_PHONE
+        });
+      } catch (err) {
+        console.error(`[WEBHOOK] Admin notify failed:`, err.message);
+      }
+    }
+  }
+
+  res.json({ received: true });
+});
+
+// ── STANDARD MIDDLEWARE (after webhook route) ─────────────────
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+
+// ── HEALTH CHECK ──────────────────────────────────────────────
 app.get('/', (req, res) => res.json({ status: 'ok', name: 'Chabad Rivertowns SMS System', time: new Date().toISOString() }));
 
-// ── DASHBOARD ─────────────────────────────────────────────
+// ── DASHBOARD ─────────────────────────────────────────────────
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
-// ── SETTINGS API ──────────────────────────────────────────
+// ── SETTINGS API ──────────────────────────────────────────────
 app.get('/settings', (req, res) => res.json(getSettings()));
 app.post('/settings', (req, res) => {
   try {
@@ -31,7 +91,7 @@ app.post('/settings', (req, res) => {
   }
 });
 
-// ── INCOMING SMS ──────────────────────────────────────────
+// ── INCOMING SMS ──────────────────────────────────────────────
 app.post('/sms/incoming', async (req, res) => {
   const from = req.body.From;
   const body = req.body.Body;
@@ -54,7 +114,7 @@ app.post('/sms/incoming', async (req, res) => {
   }
 });
 
-// ── BLAST ─────────────────────────────────────────────────
+// ── BLAST ─────────────────────────────────────────────────────
 app.post('/blast', async (req, res) => {
   const { event, phones } = req.body;
   if (!event || !phones?.length) return res.status(400).json({ error: 'Missing event or phones' });
@@ -81,7 +141,7 @@ app.post('/blast', async (req, res) => {
   res.json({ success: true, eventId, sent, failed });
 });
 
-// ── CONTACTS ──────────────────────────────────────────────
+// ── CONTACTS ──────────────────────────────────────────────────
 app.get('/contacts', (req, res) => res.json(db.getAllContacts()));
 
 app.post('/contacts', (req, res) => {
@@ -104,7 +164,7 @@ app.post('/contacts/import', (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── EVENTS ────────────────────────────────────────────────
+// ── EVENTS ────────────────────────────────────────────────────
 app.get('/events', (req, res) => {
   const eventsFile = path.join(__dirname, 'data', 'events.json');
   try {
@@ -114,7 +174,39 @@ app.get('/events', (req, res) => {
   } catch { res.json([]); }
 });
 
-// ── RSVPs ─────────────────────────────────────────────────
+// ── DELETE EVENT ──────────────────────────────────────────────
+app.delete('/api/events/:eventId', (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const eventsFile = path.join(__dirname, 'data', 'events.json');
+    const rsvpsFile  = path.join(__dirname, 'data', 'rsvps.json');
+
+    // Remove from events.json
+    if (fs.existsSync(eventsFile)) {
+      const events = JSON.parse(fs.readFileSync(eventsFile, 'utf8'));
+      if (!events[eventId]) return res.status(404).json({ error: 'Event not found' });
+      delete events[eventId];
+      fs.writeFileSync(eventsFile, JSON.stringify(events, null, 2));
+    }
+
+    // Remove RSVPs for this event from rsvps.json
+    if (fs.existsSync(rsvpsFile)) {
+      const rsvps = JSON.parse(fs.readFileSync(rsvpsFile, 'utf8'));
+      Object.keys(rsvps).forEach(phone => {
+        if (rsvps[phone][eventId]) delete rsvps[phone][eventId];
+      });
+      fs.writeFileSync(rsvpsFile, JSON.stringify(rsvps, null, 2));
+    }
+
+    console.log(`[API] Deleted event: ${eventId}`);
+    res.json({ success: true, deleted: eventId });
+  } catch (err) {
+    console.error('[API] Delete event error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── RSVPs ─────────────────────────────────────────────────────
 app.get('/rsvps/latest', (req, res) => {
   const event = db.getLatestEvent();
   if (!event) return res.json({ event: null, rsvps: [] });
@@ -123,14 +215,69 @@ app.get('/rsvps/latest', (req, res) => {
 
 app.get('/rsvps/:eventId', (req, res) => res.json(db.getRsvpsForEvent(req.params.eventId)));
 
-// ── KEEP ALIVE ────────────────────────────────────────────
+// ── DONATION SUCCESS PAGE ─────────────────────────────────────
+app.get('/donation-success', (req, res) => {
+  const amount = req.query.amount || '';
+  const displayAmount = amount ? `$${amount}` : 'your donation';
+  res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thank You!</title>
+  <style>
+    body{font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#f9f4ec;}
+    .card{background:white;border-radius:12px;padding:40px;max-width:400px;margin:0 auto;box-shadow:0 2px 12px rgba(0,0,0,0.08);}
+    h1{color:#1565c0;font-size:28px;}
+    p{color:#555;font-size:16px;line-height:1.6;}
+    .icon{font-size:60px;margin-bottom:16px;}
+    .amount{font-size:32px;font-weight:bold;color:#1565c0;margin:16px 0;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🙏</div>
+    <h1>Thank You!</h1>
+    <div class="amount">${displayAmount}</div>
+    <p>Your donation to Chabad of the Rivertowns has been received. A tax receipt is on its way to your email.</p>
+    <p>Your generosity helps us build a stronger Jewish community in the Rivertowns.</p>
+    <p style="margin-top:30px;color:#888;font-size:13px;">— Rabbi Benzion & Hinda Silverman</p>
+  </div>
+</body>
+</html>`);
+});
+
+// ── DONATION CANCEL PAGE ──────────────────────────────────────
+app.get('/donation-cancel', (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>No Problem</title>
+  <style>
+    body{font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#f9f4ec;}
+    .card{background:white;border-radius:12px;padding:40px;max-width:400px;margin:0 auto;box-shadow:0 2px 12px rgba(0,0,0,0.08);}
+    h1{color:#555;font-size:24px;}p{color:#777;font-size:15px;line-height:1.6;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div style="font-size:50px;margin-bottom:16px">↩️</div>
+    <h1>No problem!</h1>
+    <p>Your payment was cancelled. If you'd like to donate another time, just reply to any of our texts.</p>
+    <p>Thank you for being part of our community!</p>
+  </div>
+</body>
+</html>`);
+});
+
+// ── KEEP ALIVE ────────────────────────────────────────────────
 const https = require('https');
 setInterval(() => {
   const url = process.env.APP_URL;
   if (url) https.get(url).on('error', () => {});
 }, 4 * 60 * 1000);
 
-// ── START ─────────────────────────────────────────────────
+// ── START ─────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✡️  Chabad SMS System running on port ${PORT}`);
