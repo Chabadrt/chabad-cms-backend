@@ -174,6 +174,8 @@
         <label style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0;">Event</label>
         <select id="event-selector" onchange="loadRsvpsForEvent(this.value)" style="flex:1;max-width:400px;"></select>
         <button class="btn btn-outline btn-sm" onclick="loadEvents()">🔄 Refresh</button>
+        <button class="btn btn-sm" onclick="exportRsvps()" style="background:#1976d2;color:white;border:none;">📥 Export CSV</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEvent()">🗑️ Delete Event</button>
       </div>
     </div>
     <div class="stat-row">
@@ -389,7 +391,12 @@ function loadListDropdown() {
       <span id="lcount-${l.id}" style="font-size:11px;color:var(--muted);margin-left:auto;"></span>
     </label>`).join('');
   const checkboxes = document.querySelectorAll('.list-checkbox');
-  if (checkboxes.length && ![...checkboxes].some(c => c.checked)) checkboxes[0].checked = true;
+  if (checkboxes.length && ![...checkboxes].some(c => c.checked)) {
+    // Default to "test" list if one exists, otherwise first list
+    const testChk = [...checkboxes].find(c => c.parentElement.textContent.toLowerCase().includes('test'));
+    if (testChk) testChk.checked = true;
+    else checkboxes[0].checked = true;
+  }
   loadContactCount();
 }
 
@@ -774,6 +781,49 @@ function processCSV(file){
 }
 
 // ── INIT ──────────────────────────────────────────────────
+// ── DELETE EVENT ──────────────────────────────────────────
+async function deleteEvent() {
+  const sel = document.getElementById('event-selector');
+  const eventId = sel?.value;
+  const eventName = sel?.options[sel.selectedIndex]?.text;
+  if (!eventId) { notify('Please select an event first.', true); return; }
+  if (!confirm(`Delete "${eventName}"?\n\nThis will permanently remove the event and all its RSVPs. This cannot be undone.`)) return;
+  try {
+    const res = await fetch(`/api/events/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
+    if (res.ok) {
+      notify(`"${eventName}" deleted.`);
+      loadEvents();
+    } else {
+      const err = await res.json();
+      notify(`Error: ${err.error || 'Could not delete event'}`, true);
+    }
+  } catch (err) { notify('Network error: ' + err.message, true); }
+}
+
+// ── EXPORT RSVPS AS CSV ───────────────────────────────────
+function exportRsvps() {
+  const sel = document.getElementById('event-selector');
+  const eventId = sel?.value;
+  const eventName = sel?.options[sel.selectedIndex]?.text || 'rsvps';
+  if (!eventId) { notify('Please select an event first.', true); return; }
+  const table = document.querySelector('#rsvp-table table');
+  if (!table) { notify('No RSVP data to export.', true); return; }
+  const rows = table.querySelectorAll('tr');
+  let csv = '';
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('th, td');
+    const rowData = Array.from(cells).map(cell => `"${cell.innerText.replace(/"/g, '""')}"`);
+    csv += rowData.join(',') + '\n';
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${eventName.replace(/[^a-z0-9]/gi, '_')}_rsvps.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 fetch('/settings').then(r=>r.json()).then(s=>{
   currentSettings=s;
   loadListDropdown();
