@@ -1,5 +1,12 @@
 const db = require('./db');
 const { getSettings } = require('./settings');
+const {
+  getOrCreateCustomer,
+  getSavedCard,
+  chargeCardOnFile,
+  createPaymentLink,
+  getDonationConfirmationText
+} = require('./payments');
 
 function getFirstName(contact) {
   if (!contact?.name) return null;
@@ -26,7 +33,7 @@ function parseDonation(msg, event) {
   const amounts = event?.donationAmounts || [5, 10, 18];
 
   // Skip signals
-  const skipWords = ['n','no','skip','pass','next time','not now','nope'];
+  const skipWords = ['n','no','skip','pass','next time','not now','nope','no thank you','no thanks'];
   for (const w of skipWords) { if (m === w || m.includes(w)) return 'skip'; }
 
   // Preset number replies (1, 2, 3)
@@ -49,8 +56,7 @@ function parseDonation(msg, event) {
 
 function buildDonationMenu(event, s) {
   const amounts = event?.donationAmounts || [5, 10, 18];
-  const usePreset = !event?.donationAmounts || event.donationAmounts.length > 0;
-  const useFreeform = event?.useFreeform !== false; // default true
+  const useFreeform = event?.useFreeform !== false;
   const usePresetToggle = event?.donationAmounts !== null && amounts.length > 0;
 
   let menu = '';
@@ -74,10 +80,12 @@ async function handleIncoming(from, body) {
   const contact = db.getContact(phone);
   const s = getSettings();
   console.log(`[SMS IN] ${phone} | step: ${conv.step} | msg: "${msg}"`);
+
   switch (conv.step) {
     case 'idle': return handleIdle(phone, msg, contact, conv, s);
     case 'await_headcount': return handleHeadcount(phone, msg, contact, conv, s);
     case 'await_donation_decision': return handleDonationDecision(phone, msg, contact, conv, s);
+    case 'await_card_confirm': return handleCardConfirm(phone, msg, contact, conv, s);
     default: return handleIdle(phone, msg, contact, conv, s);
   }
 }
@@ -140,23 +148,94 @@ async function handleDonationDecision(phone, msg, contact, conv, s) {
     return `I didn't quite catch that. Please reply with a number from the options below or type any amount:\n\n${menu}`;
   }
 
-  // Get the right Stripe link
-  const links = s.donationLinks || {};
-  const presetAmounts = event?.donationAmounts || [5, 10, 18];
-  let link;
+  // Look up or create Stripe customer
+  const customerId = await getOrCreateCustomer(phone, contact?.name);
 
-  if (presetAmounts.includes(amount) && links[amount]) {
-    // Use the specific preset Stripe link
-    link = links[amount];
-  } else {
-    // Free-form amount — generate a dynamic Stripe link
-    const { createPaymentLink } = require('./payments');
-    link = await createPaymentLink(amount, event?.name || 'Chabad Event');
+  // Check for saved card
+  const savedCard = customerId ? await getSavedCard(customerId) : null;
+
+  if (savedCard) {
+    // Ask if they want to use saved card
+    db.saveConversation(phone, {
+      ...conv,
+      step: 'await_card_confirm',
+      pendingAmount: amount,
+      customerId,
+      savedCard: {
+        paymentMethodId: savedCard.paymentMethodId,
+        brand: savedCard.brand,
+        last4: savedCard.last4
+      }
+    });
+    const brandCap = savedCard.brand.charAt(0).toUpperCase() + savedCard.brand.slice(1);
+    return (
+      `We have your ${brandCap} card ending in ${savedCard.last4} on file.\n\n` +
+      `Donate $${amount}?\n\n` +
+      `1 — Yes, charge my saved card\n` +
+      `2 — Use a different card`
+    );
   }
 
+  // No saved card — send Stripe Checkout link (card auto-saved after payment)
+  return await sendPaymentLink(phone, amount, event, conv, contact, s, customerId);
+}
+
+async function handleCardConfirm(phone, msg, contact, conv, s) {
+  const m = msg.toLowerCase().trim();
+  const event = db.getEvent(conv.eventId);
+  const { customerId, savedCard, pendingAmount } = conv;
+
+  const isYes = ['1', 'yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'y'].includes(m);
+  const isNo  = ['2', 'no', 'nope', 'different', 'new card', 'other'].includes(m);
+
+  if (isYes) {
+    // Charge the saved card
+    const result = await chargeCardOnFile(customerId, savedCard.paymentMethodId, pendingAmount, event?.name || 'Chabad Event');
+
+    if (result.success) {
+      db.saveRsvp(conv.eventId, phone, { donationAmount: pendingAmount, chargedOnFile: true });
+      db.clearConversation(phone);
+      const confirmText = await getDonationConfirmationText(pendingAmount, getFirstName(contact));
+      return `${confirmText}\n\n${confirmationMessage(event, s, contact)}`;
+    }
+
+    if (result.requiresAction) {
+      // Card needs re-authentication — fall back to link
+      const link = await createPaymentLink(pendingAmount, event?.name || 'Chabad Event', customerId, phone);
+      db.clearConversation(phone);
+      return (
+        `Your saved card needs to be re-verified. Please use this secure link:\n` +
+        `🔗 ${link}\n\n` +
+        `${confirmationMessage(event, s, contact)}`
+      );
+    }
+
+    // Generic failure
+    db.clearConversation(phone);
+    return (
+      `There was an issue processing your card. Please try again or call (914) 330-1307.\n\n` +
+      `${confirmationMessage(event, s, contact)}`
+    );
+  }
+
+  if (isNo) {
+    // Send a fresh payment link instead
+    return await sendPaymentLink(phone, pendingAmount, event, conv, contact, s, customerId);
+  }
+
+  return `Please reply:\n1 — Yes, charge my saved card\n2 — Use a different card`;
+}
+
+async function sendPaymentLink(phone, amount, event, conv, contact, s, customerId) {
+  const link = await createPaymentLink(amount, event?.name || 'Chabad Event', customerId, phone);
   db.saveRsvp(conv.eventId, phone, { donationAmount: amount });
   db.clearConversation(phone);
-  return `${s.donationThankYou}\n🔗 ${link}\n\n${s.cardSavedNote}\n\n${confirmationMessage(event, s, contact)}`;
+  return (
+    `${s.donationThankYou || 'Thank you! Here\'s your secure donation link:'}\n` +
+    `🔗 ${link}\n\n` +
+    `💳 Your card will be saved for next time.\n\n` +
+    `${confirmationMessage(event, s, contact)}`
+  );
 }
 
 function confirmationMessage(event, s, contact) {
