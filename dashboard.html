@@ -86,6 +86,7 @@
   <div class="tab active" onclick="showTab('blast',this)">📤 Send Blast</div>
   <div class="tab" onclick="showTab('rsvps',this)">📋 RSVPs</div>
   <div class="tab" onclick="showTab('contacts',this)">👥 Contacts</div>
+  <div class="tab" onclick="showTab('donors',this)">💳 Donors</div>
   <div class="tab" onclick="showTab('settings',this)">✏️ Messages</div>
   <div class="tab" onclick="showTab('lists',this)">🗂️ Lists</div>
 </div>
@@ -174,8 +175,6 @@
         <label style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0;">Event</label>
         <select id="event-selector" onchange="loadRsvpsForEvent(this.value)" style="flex:1;max-width:400px;"></select>
         <button class="btn btn-outline btn-sm" onclick="loadEvents()">🔄 Refresh</button>
-        <button class="btn btn-sm" onclick="exportRsvps()" style="background:#1976d2;color:white;border:none;">📥 Export CSV</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteEvent()">🗑️ Delete Event</button>
       </div>
     </div>
     <div class="stat-row">
@@ -258,6 +257,29 @@
     </div>
   </div>
 
+  <!-- ══ DONORS TAB ══ -->
+  <div class="page" id="tab-donors">
+    <div class="card" style="padding:16px 20px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-family:'Playfair Display',serif;font-size:17px;color:var(--gold-light);">💳 Donor & Card Details</span>
+        <button class="btn btn-outline btn-sm" onclick="loadDonors()">🔄 Refresh</button>
+        <button class="btn btn-sm" onclick="exportDonors()" style="background:#1976d2;color:white;border:none;">📥 Export CSV</button>
+        <span id="donor-count" style="font-size:13px;color:var(--muted);margin-left:auto;"></span>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-num" id="donor-stat-total">—</div><div class="stat-label">Total Donors</div></div>
+      <div class="stat"><div class="stat-num" id="donor-stat-raised">—</div><div class="stat-label">Total Raised</div></div>
+      <div class="stat"><div class="stat-num" id="donor-stat-cards">—</div><div class="stat-label">Cards on File</div></div>
+    </div>
+    <div class="card">
+      <div style="margin-bottom:14px;">
+        <input type="text" id="donor-search" placeholder="🔍 Search by name or phone..." oninput="filterDonorsTable()" style="max-width:300px;padding:8px 12px;font-size:13px;">
+      </div>
+      <div id="donors-table"><p style="color:var(--muted);font-size:14px;">Loading donors...</p></div>
+    </div>
+  </div>
+
   <!-- ══ LISTS TAB ══ -->
   <div class="page" id="tab-lists">
     <div class="card">
@@ -306,6 +328,7 @@ function showTab(name, el) {
   el.classList.add('active');
   if (name === 'rsvps') loadEvents();
   if (name === 'contacts') { loadContacts(); renderNewContactLists(); }
+  if (name === 'donors') loadDonors();
   if (name === 'settings') loadSettings();
   if (name === 'lists') loadListsTab();
   if (name === 'blast') { loadListDropdown(); loadContactCount(); }
@@ -391,12 +414,7 @@ function loadListDropdown() {
       <span id="lcount-${l.id}" style="font-size:11px;color:var(--muted);margin-left:auto;"></span>
     </label>`).join('');
   const checkboxes = document.querySelectorAll('.list-checkbox');
-  if (checkboxes.length && ![...checkboxes].some(c => c.checked)) {
-    // Default to "test" list if one exists, otherwise first list
-    const testChk = [...checkboxes].find(c => c.parentElement.textContent.toLowerCase().includes('test'));
-    if (testChk) testChk.checked = true;
-    else checkboxes[0].checked = true;
-  }
+  if (checkboxes.length && ![...checkboxes].some(c => c.checked)) checkboxes[0].checked = true;
   loadContactCount();
 }
 
@@ -781,47 +799,104 @@ function processCSV(file){
 }
 
 // ── INIT ──────────────────────────────────────────────────
-// ── DELETE EVENT ──────────────────────────────────────────
-async function deleteEvent() {
-  const sel = document.getElementById('event-selector');
-  const eventId = sel?.value;
-  const eventName = sel?.options[sel.selectedIndex]?.text;
-  if (!eventId) { notify('Please select an event first.', true); return; }
-  if (!confirm(`Delete "${eventName}"?\n\nThis will permanently remove the event and all its RSVPs. This cannot be undone.`)) return;
+// ── DONORS ────────────────────────────────────────────────
+let allDonors = [];
+
+async function loadDonors() {
+  document.getElementById('donors-table').innerHTML = '<p style="color:var(--muted);font-size:14px;"><span class="spinner"></span> Loading from Stripe...</p>';
+  document.getElementById('donor-count').textContent = '';
   try {
-    const res = await fetch(`/api/events/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
-    if (res.ok) {
-      notify(`"${eventName}" deleted.`);
-      loadEvents();
-    } else {
-      const err = await res.json();
-      notify(`Error: ${err.error || 'Could not delete event'}`, true);
-    }
-  } catch (err) { notify('Network error: ' + err.message, true); }
+    const res = await fetch('/api/donors');
+    if (!res.ok) throw new Error('Could not load donors');
+    allDonors = await res.json();
+    renderDonorsTable(allDonors);
+  } catch (err) {
+    document.getElementById('donors-table').innerHTML = `<p style="color:#f87171;">Could not load donors: ${err.message}</p>`;
+  }
 }
 
-// ── EXPORT RSVPS AS CSV ───────────────────────────────────
-function exportRsvps() {
-  const sel = document.getElementById('event-selector');
-  const eventId = sel?.value;
-  const eventName = sel?.options[sel.selectedIndex]?.text || 'rsvps';
-  if (!eventId) { notify('Please select an event first.', true); return; }
-  const table = document.querySelector('#rsvp-table table');
-  if (!table) { notify('No RSVP data to export.', true); return; }
-  const rows = table.querySelectorAll('tr');
-  let csv = '';
-  rows.forEach(row => {
-    const cells = row.querySelectorAll('th, td');
-    const rowData = Array.from(cells).map(cell => `"${cell.innerText.replace(/"/g, '""')}"`);
-    csv += rowData.join(',') + '\n';
+function renderDonorsTable(donors) {
+  // Stats
+  const totalRaised = donors.reduce((s, d) => s + (d.totalDonated || 0), 0);
+  const cardsOnFile = donors.filter(d => d.card).length;
+  document.getElementById('donor-stat-total').textContent = donors.length;
+  document.getElementById('donor-stat-raised').textContent = `$${totalRaised.toFixed(0)}`;
+  document.getElementById('donor-stat-cards').textContent = cardsOnFile;
+  document.getElementById('donor-count').textContent = `${donors.length} donor${donors.length !== 1 ? 's' : ''}`;
+
+  if (!donors.length) {
+    document.getElementById('donors-table').innerHTML = '<p style="color:var(--muted);padding:16px 0;">No donors yet. Donors appear here after their first Stripe payment.</p>';
+    return;
+  }
+
+  let html = '<div style="overflow-x:auto;"><table><thead><tr>';
+  html += '<th>Name</th><th>Phone</th><th>Card on File</th><th>Expires</th><th>Total Donated</th><th>Donations</th><th>Last Gift</th><th>Since</th>';
+  html += '</tr></thead><tbody>';
+
+  for (const d of donors) {
+    const cardBrand = d.card ? (d.card.brand.charAt(0).toUpperCase() + d.card.brand.slice(1)) : '—';
+    const cardDisplay = d.card
+      ? `<span style="display:inline-flex;align-items:center;gap:5px;">
+          <span style="background:rgba(201,168,76,0.15);color:var(--gold);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${cardBrand}</span>
+          ••••&nbsp;${d.card.last4}
+        </span>`
+      : '<span style="color:var(--muted);font-size:12px;">No card</span>';
+    const expiry = d.card ? `${String(d.card.expMonth).padStart(2,'0')}/${String(d.card.expYear).slice(-2)}` : '—';
+    const totalDisplay = d.totalDonated > 0 ? `<strong style="color:var(--gold);">$${d.totalDonated.toFixed(0)}</strong>` : '—';
+
+    html += `<tr>
+      <td>${d.name}</td>
+      <td style="font-size:12px;">${d.phone}</td>
+      <td>${cardDisplay}</td>
+      <td style="font-size:12px;">${expiry}</td>
+      <td>${totalDisplay}</td>
+      <td style="text-align:center;">${d.donationCount || '—'}</td>
+      <td style="font-size:12px;">${d.lastDonation || '—'}</td>
+      <td style="font-size:12px;color:var(--muted);">${d.created}</td>
+    </tr>`;
+  }
+
+  html += '</tbody></table></div>';
+  document.getElementById('donors-table').innerHTML = html;
+}
+
+function filterDonorsTable() {
+  const q = document.getElementById('donor-search').value.toLowerCase();
+  const filtered = allDonors.filter(d =>
+    (d.name || '').toLowerCase().includes(q) ||
+    (d.phone || '').includes(q) ||
+    (d.email || '').toLowerCase().includes(q)
+  );
+  renderDonorsTable(filtered);
+}
+
+function exportDonors() {
+  if (!allDonors.length) { notify('No donor data to export.', true); return; }
+  const headers = ['Name', 'Phone', 'Email', 'Card Brand', 'Last 4', 'Expiry', 'Total Donated', 'Donations', 'Last Gift', 'Customer Since'];
+  let csv = headers.map(h => `"${h}"`).join(',') + '\n';
+  allDonors.forEach(d => {
+    const row = [
+      d.name,
+      d.phone,
+      d.email,
+      d.card ? d.card.brand : '',
+      d.card ? d.card.last4 : '',
+      d.card ? `${String(d.card.expMonth).padStart(2,'0')}/${d.card.expYear}` : '',
+      d.totalDonated ? `$${d.totalDonated.toFixed(2)}` : '$0',
+      d.donationCount || 0,
+      d.lastDonation || '',
+      d.created
+    ];
+    csv += row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',') + '\n';
   });
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${eventName.replace(/[^a-z0-9]/gi, '_')}_rsvps.csv`;
+  a.download = `chabad_donors_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+  notify('✅ Donor list exported!');
 }
 
 fetch('/settings').then(r=>r.json()).then(s=>{
