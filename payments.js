@@ -1,5 +1,4 @@
 // payments.js — Handles all Stripe interactions.
-// Charges cards on file and creates payment links for new donors.
 
 const Stripe = require('stripe');
 
@@ -86,39 +85,50 @@ async function chargeCardOnFile(customerId, paymentMethodId, amountDollars, even
   }
 }
 
-// ── CREATE PAYMENT LINK (saves card for future use) ───────────
+// ── CREATE PAYMENT LINK (permanent, never expires, saves card) ─
+// Uses Stripe Payment Links — never expire, reusable, card saved after payment.
 async function createPaymentLink(amountDollars, eventName, customerId = null, phone = null) {
   try {
     const stripe = getStripe();
     const baseUrl = process.env.BASE_URL || 'https://chabad-cms-backend-production.up.railway.app';
 
-    const sessionParams = {
-      mode: 'payment',
-      line_items: [{
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: `Donation — ${eventName}`,
-            description: 'Tax-deductible donation to Chabad of the Rivertowns'
-          },
-          unit_amount: Math.round(amountDollars * 100)
-        },
-        quantity: 1
-      }],
+    // Create a one-time price for this exact amount
+    const price = await stripe.prices.create({
+      unit_amount: Math.round(amountDollars * 100),
+      currency: 'usd',
+      product_data: {
+        name: `Donation — ${eventName || 'Chabad of the Rivertowns'}`,
+        metadata: { source: 'sms-rsvp' }
+      }
+    });
+
+    // Create permanent Payment Link with card-saving enabled
+    const link = await stripe.paymentLinks.create({
+      line_items: [{ price: price.id, quantity: 1 }],
       payment_intent_data: {
         setup_future_usage: 'off_session',
-        metadata: { source: 'sms-rsvp', phone: phone || '' }
+        metadata: {
+          source: 'sms-rsvp',
+          phone: phone || '',
+          amount: String(amountDollars),
+          event: eventName || ''
+        }
       },
-      success_url: `${baseUrl}/donation-success?amount=${amountDollars}&phone=${encodeURIComponent(phone || '')}`,
-      cancel_url: `${baseUrl}/donation-cancel`,
-      metadata: { phone: phone || '', amount: String(amountDollars), event: eventName }
-    };
+      after_completion: {
+        type: 'redirect',
+        redirect: {
+          url: `${baseUrl}/donation-success?amount=${amountDollars}&phone=${encodeURIComponent(phone || '')}`
+        }
+      },
+      metadata: {
+        phone: phone || '',
+        amount: String(amountDollars),
+        event: eventName || ''
+      }
+    });
 
-    if (customerId) sessionParams.customer = customerId;
-
-    const session = await stripe.checkout.sessions.create(sessionParams);
-    console.log(`[STRIPE] Created payment link for $${amountDollars}: ${session.url}`);
-    return session.url;
+    console.log(`[STRIPE] Created payment link for $${amountDollars}: ${link.url}`);
+    return link.url;
 
   } catch (err) {
     console.error(`[STRIPE ERROR] createPaymentLink:`, err.message);
