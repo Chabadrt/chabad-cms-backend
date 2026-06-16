@@ -6,11 +6,10 @@ const fs = require('fs');
 const { handleIncoming } = require('./sms');
 const { importContacts } = require('./import');
 const { getSettings, saveSettings } = require('./settings');
-const { getDonationConfirmationText } = require('./payments');
+const { getReceiptText } = require('./payments');
 const db = require('./db');
 
 const app = express();
-
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // ── STRIPE WEBHOOK (must come BEFORE express.json()) ──────────
@@ -24,36 +23,45 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
     console.error(`[WEBHOOK] Signature failed: ${err.message}`);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    const phone = session.metadata?.phone;
-    const amount = session.metadata?.amount || (session.amount_total / 100);
+
+  if (event.type === 'payment_intent.succeeded') {
+    const intent = event.data.object;
+    const phone = intent.metadata?.phone;
+    const amount = intent.amount / 100;
     console.log(`[WEBHOOK] Payment complete — phone: ${phone}, amount: $${amount}`);
+
     if (phone) {
       try {
+        const s = getSettings();
         const contact = db.getContact(phone);
         const name = contact?.name ? contact.name.split(' ')[0] : null;
-        const confirmText = await getDonationConfirmationText(amount, name);
-        await twilioClient.messages.create({ body: confirmText, from: process.env.TWILIO_PHONE_NUMBER, to: phone });
-        console.log(`[WEBHOOK] Confirmation SMS sent to ${phone}`);
+        const receiptText = await getReceiptText(amount, name, s.receiptType || 'donation', s.receiptMessage || null);
+        await twilioClient.messages.create({ body: receiptText, from: process.env.TWILIO_PHONE_NUMBER, to: phone });
+        console.log(`[WEBHOOK] Receipt SMS sent to ${phone}`);
       } catch (smsErr) {
-        console.error(`[WEBHOOK] Confirmation SMS failed:`, smsErr.message);
+        console.error(`[WEBHOOK] Receipt SMS failed:`, smsErr.message);
       }
     }
-    if (process.env.ADMIN_PHONE) {
+
+    if (process.env.ADMIN_PHONE && phone) {
       try {
         const contact = db.getContact(phone);
         const name = contact?.name || phone;
-        await twilioClient.messages.create({ body: `💰 Donation received: $${amount} from ${name}`, from: process.env.TWILIO_PHONE_NUMBER, to: process.env.ADMIN_PHONE });
+        await twilioClient.messages.create({
+          body: `💰 Payment received: $${amount} from ${name}`,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: process.env.ADMIN_PHONE
+        });
       } catch (err) {
         console.error(`[WEBHOOK] Admin notify failed:`, err.message);
       }
     }
   }
+
   res.json({ received: true });
 });
 
-// ── STANDARD MIDDLEWARE (after webhook route) ─────────────────
+// ── STANDARD MIDDLEWARE ───────────────────────────────────────
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
@@ -147,6 +155,18 @@ app.post('/contacts/import', (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ── BULK REMOVE CONTACTS FROM LIST ───────────────────────────
+app.post('/contacts/bulk-remove-from-list', (req, res) => {
+  const { phones, listId } = req.body;
+  if (!phones?.length || !listId) return res.status(400).json({ error: 'phones and listId required' });
+  try {
+    db.removeContactsFromList(phones, listId);
+    res.json({ success: true, removed: phones.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── EVENTS ────────────────────────────────────────────────────
 app.get('/events', (req, res) => {
   const eventsFile = path.join(__dirname, 'data', 'events.json');
@@ -197,61 +217,39 @@ app.get('/rsvps/:eventId', (req, res) => res.json(db.getRsvpsForEvent(req.params
 app.get('/api/donors', async (req, res) => {
   try {
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
-    // Fetch up to 100 customers tagged with sms-rsvp source
     const customers = await stripe.customers.search({
       query: `metadata['source']:'sms-rsvp'`,
       limit: 100,
       expand: ['data.sources']
     });
-
     const donors = await Promise.all(customers.data.map(async (customer) => {
-      // Get saved payment methods for each customer
       let card = null;
       try {
         const methods = await stripe.paymentMethods.list({ customer: customer.id, type: 'card', limit: 1 });
         if (methods.data.length > 0) {
           const pm = methods.data[0].card;
-          card = {
-            brand: pm.brand,
-            last4: pm.last4,
-            expMonth: pm.exp_month,
-            expYear: pm.exp_year
-          };
+          card = { brand: pm.brand, last4: pm.last4, expMonth: pm.exp_month, expYear: pm.exp_year };
         }
-      } catch (e) { /* no card */ }
-
-      // Get total donations from payment intents
-      let totalDonated = 0;
-      let donationCount = 0;
-      let lastDonation = null;
+      } catch (e) {}
+      let totalDonated = 0, donationCount = 0, lastDonation = null;
       try {
         const intents = await stripe.paymentIntents.list({ customer: customer.id, limit: 100 });
         const succeeded = intents.data.filter(p => p.status === 'succeeded');
         totalDonated = succeeded.reduce((sum, p) => sum + p.amount, 0) / 100;
         donationCount = succeeded.length;
-        if (succeeded.length > 0) {
-          lastDonation = new Date(succeeded[0].created * 1000).toLocaleDateString();
-        }
-      } catch (e) { /* no payments */ }
-
+        if (succeeded.length > 0) lastDonation = new Date(succeeded[0].created * 1000).toLocaleDateString();
+      } catch (e) {}
       return {
         id: customer.id,
         name: customer.name || '—',
         phone: customer.metadata?.phone || customer.phone || '—',
         email: customer.email || '—',
-        card,
-        totalDonated,
-        donationCount,
-        lastDonation,
+        card, totalDonated, donationCount, lastDonation,
         created: new Date(customer.created * 1000).toLocaleDateString()
       };
     }));
-
-    // Sort by total donated descending
     donors.sort((a, b) => b.totalDonated - a.totalDonated);
     res.json(donors);
-
   } catch (err) {
     console.error('[API] Donors error:', err.message);
     res.status(500).json({ error: err.message });
@@ -261,7 +259,7 @@ app.get('/api/donors', async (req, res) => {
 // ── DONATION SUCCESS PAGE ─────────────────────────────────────
 app.get('/donation-success', (req, res) => {
   const amount = req.query.amount || '';
-  const displayAmount = amount ? `$${amount}` : 'your donation';
+  const displayAmount = amount ? `$${amount}` : 'your payment';
   res.send(`<!DOCTYPE html>
 <html>
 <head>
@@ -276,12 +274,12 @@ app.get('/donation-success', (req, res) => {
 </head>
 <body>
   <div class="card">
-    <div class="icon">🙏</div>
+    <div class="icon">❤️</div>
     <h1>Thank You!</h1>
     <div class="amount">${displayAmount}</div>
-    <p>Your donation to Chabad of the Rivertowns has been received. A tax receipt is on its way to your email.</p>
+    <p>Your payment to Chabad of the Rivertowns has been received.</p>
     <p>Your generosity helps us build a stronger Jewish community in the Rivertowns.</p>
-    <p style="margin-top:30px;color:#888;font-size:13px;">— Rabbi Benzion & Hinda Silverman</p>
+    <p style="margin-top:30px;color:#888;font-size:13px;">— Rabbi Benjy & Hinda Silverman</p>
   </div>
 </body>
 </html>`);
@@ -304,7 +302,7 @@ app.get('/donation-cancel', (req, res) => {
   <div class="card">
     <div style="font-size:50px;margin-bottom:16px">↩️</div>
     <h1>No problem!</h1>
-    <p>Your payment was cancelled. If you'd like to donate another time, just reply to any of our texts.</p>
+    <p>Your payment was cancelled. If you'd like to try again, just reply to any of our texts.</p>
     <p>Thank you for being part of our community!</p>
   </div>
 </body>
