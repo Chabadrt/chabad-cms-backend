@@ -9,17 +9,12 @@ function loadFile(name) {
   if (!fs.existsSync(p)) return {};
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return {}; }
 }
-
 function saveFile(name, data) {
-  const p = path.join(DATA_DIR, name + '.json');
-  fs.writeFileSync(p, JSON.stringify(data, null, 2));
+  fs.writeFileSync(path.join(DATA_DIR, name + '.json'), JSON.stringify(data, null, 2));
 }
 
 // ── CONTACTS ──────────────────────────────────────────────
-function getContact(phone) {
-  const contacts = loadFile('contacts');
-  return contacts[phone] || null;
-}
+function getContact(phone) { return loadFile('contacts')[phone] || null; }
 
 function saveContact(phone, data) {
   const contacts = loadFile('contacts');
@@ -29,11 +24,23 @@ function saveContact(phone, data) {
   return contacts[phone];
 }
 
-function getAllContacts() {
-  return Object.values(loadFile('contacts'));
+function getAllContacts() { return Object.values(loadFile('contacts')); }
+
+// ── DELETE SINGLE CONTACT ─────────────────────────────────
+function deleteContact(phone) {
+  const contacts = loadFile('contacts');
+  delete contacts[phone];
+  saveFile('contacts', contacts);
 }
 
-// ── REMOVE CONTACTS FROM A LIST (bulk) ────────────────────
+// ── BULK DELETE CONTACTS ──────────────────────────────────
+function bulkDeleteContacts(phones) {
+  const contacts = loadFile('contacts');
+  phones.forEach(phone => delete contacts[phone]);
+  saveFile('contacts', contacts);
+}
+
+// ── REMOVE CONTACTS FROM A LIST ───────────────────────────
 function removeContactsFromList(phones, listId) {
   const contacts = loadFile('contacts');
   phones.forEach(phone => {
@@ -47,10 +54,7 @@ function removeContactsFromList(phones, listId) {
 }
 
 // ── CONVERSATIONS ──────────────────────────────────────────
-function getConversation(phone) {
-  const convs = loadFile('conversations');
-  return convs[phone] || { step: 'idle' };
-}
+function getConversation(phone) { return loadFile('conversations')[phone] || { step: 'idle' }; }
 
 function saveConversation(phone, data) {
   const convs = loadFile('conversations');
@@ -65,17 +69,8 @@ function clearConversation(phone) {
 }
 
 // ── EVENTS ────────────────────────────────────────────────
-function saveEvent(event) {
-  const events = loadFile('events');
-  events[event.id] = event;
-  saveFile('events', events);
-}
-
-function getEvent(id) {
-  const events = loadFile('events');
-  return events[id] || null;
-}
-
+function saveEvent(event) { const events = loadFile('events'); events[event.id] = event; saveFile('events', events); }
+function getEvent(id) { return loadFile('events')[id] || null; }
 function getLatestEvent() {
   const events = Object.values(loadFile('events'));
   if (!events.length) return null;
@@ -86,23 +81,15 @@ function getLatestEvent() {
 function saveRsvp(eventId, phone, data) {
   const rsvps = loadFile('rsvps');
   if (!rsvps[eventId]) rsvps[eventId] = {};
-  rsvps[eventId][phone] = {
-    ...rsvps[eventId][phone],
-    ...data,
-    phone,
-    updatedAt: new Date().toISOString()
-  };
+  rsvps[eventId][phone] = { ...rsvps[eventId][phone], ...data, phone, updatedAt: new Date().toISOString() };
   if (!rsvps[eventId][phone].createdAt) rsvps[eventId][phone].createdAt = new Date().toISOString();
   saveFile('rsvps', rsvps);
 }
-
-function getRsvpsForEvent(eventId) {
-  const rsvps = loadFile('rsvps');
-  return Object.values(rsvps[eventId] || {});
-}
+function getRsvpsForEvent(eventId) { return Object.values(loadFile('rsvps')[eventId] || {}); }
 
 module.exports = {
-  getContact, saveContact, getAllContacts, removeContactsFromList,
+  getContact, saveContact, getAllContacts,
+  deleteContact, bulkDeleteContacts, removeContactsFromList,
   getConversation, saveConversation, clearConversation,
   saveEvent, getEvent, getLatestEvent,
   saveRsvp, getRsvpsForEvent
