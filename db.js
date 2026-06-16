@@ -1,10 +1,6 @@
 // db.js — Simple file-based database using JSON
-// Stores contacts, conversations, and RSVPs in local JSON files.
-// On Railway, data persists as long as the project runs.
-
 const fs = require('fs');
 const path = require('path');
-
 const DATA_DIR = path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
@@ -20,8 +16,6 @@ function saveFile(name, data) {
 }
 
 // ── CONTACTS ──────────────────────────────────────────────
-// contacts[phone] = { name, phone, stripeCustomerId, cardLast4, lists[], createdAt }
-
 function getContact(phone) {
   const contacts = loadFile('contacts');
   return contacts[phone] || null;
@@ -39,10 +33,20 @@ function getAllContacts() {
   return Object.values(loadFile('contacts'));
 }
 
-// ── CONVERSATIONS ──────────────────────────────────────────
-// conversations[phone] = { step, eventId, guestCount, ... }
-// Tracks where each person is in the RSVP conversation flow.
+// ── REMOVE CONTACTS FROM A LIST (bulk) ────────────────────
+function removeContactsFromList(phones, listId) {
+  const contacts = loadFile('contacts');
+  phones.forEach(phone => {
+    if (contacts[phone]) {
+      contacts[phone].lists = (contacts[phone].lists || []).filter(l => l !== listId);
+      if (!contacts[phone].lists.length) contacts[phone].lists = ['all'];
+      contacts[phone].updatedAt = new Date().toISOString();
+    }
+  });
+  saveFile('contacts', contacts);
+}
 
+// ── CONVERSATIONS ──────────────────────────────────────────
 function getConversation(phone) {
   const convs = loadFile('conversations');
   return convs[phone] || { step: 'idle' };
@@ -61,8 +65,6 @@ function clearConversation(phone) {
 }
 
 // ── EVENTS ────────────────────────────────────────────────
-// events[id] = { id, name, date, time, location, sentAt, sentTo }
-
 function saveEvent(event) {
   const events = loadFile('events');
   events[event.id] = event;
@@ -81,8 +83,6 @@ function getLatestEvent() {
 }
 
 // ── RSVPs ─────────────────────────────────────────────────
-// rsvps[eventId][phone] = { phone, name, status, guestCount, donationAmount, donatedAt }
-
 function saveRsvp(eventId, phone, data) {
   const rsvps = loadFile('rsvps');
   if (!rsvps[eventId]) rsvps[eventId] = {};
@@ -102,7 +102,7 @@ function getRsvpsForEvent(eventId) {
 }
 
 module.exports = {
-  getContact, saveContact, getAllContacts,
+  getContact, saveContact, getAllContacts, removeContactsFromList,
   getConversation, saveConversation, clearConversation,
   saveEvent, getEvent, getLatestEvent,
   saveRsvp, getRsvpsForEvent
