@@ -71,7 +71,7 @@ async function chargeCardOnFile(customerId, paymentMethodId, amountDollars, even
       payment_method: paymentMethodId,
       confirm: true,
       off_session: true,
-      description: `Donation — ${eventName} — Chabad of the Rivertowns`,
+      description: `Payment — ${eventName} — Chabad of the Rivertowns`,
       metadata: { event: eventName, source: 'sms-rsvp-card-on-file' }
     });
     if (intent.status === 'succeeded') {
@@ -85,35 +85,24 @@ async function chargeCardOnFile(customerId, paymentMethodId, amountDollars, even
   }
 }
 
-// ── CREATE PAYMENT LINK (permanent, never expires, saves card) ─
-// Uses Stripe Payment Links — never expire, reusable, card saved after payment.
-async function createPaymentLink(amountDollars, eventName, customerId = null, phone = null) {
+// ── CREATE PAYMENT LINK (permanent, never expires) ────────────
+// saveCard: true = includes setup_future_usage so card is saved after payment
+async function createPaymentLink(amountDollars, eventName, customerId = null, phone = null, saveCard = true) {
   try {
     const stripe = getStripe();
     const baseUrl = process.env.BASE_URL || 'https://chabad-cms-backend-production.up.railway.app';
 
-    // Create a one-time price for this exact amount
     const price = await stripe.prices.create({
       unit_amount: Math.round(amountDollars * 100),
       currency: 'usd',
       product_data: {
-        name: `Donation — ${eventName || 'Chabad of the Rivertowns'}`,
+        name: `${eventName || 'Chabad of the Rivertowns'}`,
         metadata: { source: 'sms-rsvp' }
       }
     });
 
-    // Create permanent Payment Link with card-saving enabled
-    const link = await stripe.paymentLinks.create({
+    const linkParams = {
       line_items: [{ price: price.id, quantity: 1 }],
-      payment_intent_data: {
-        setup_future_usage: 'off_session',
-        metadata: {
-          source: 'sms-rsvp',
-          phone: phone || '',
-          amount: String(amountDollars),
-          event: eventName || ''
-        }
-      },
       after_completion: {
         type: 'redirect',
         redirect: {
@@ -125,9 +114,32 @@ async function createPaymentLink(amountDollars, eventName, customerId = null, ph
         amount: String(amountDollars),
         event: eventName || ''
       }
-    });
+    };
 
-    console.log(`[STRIPE] Created payment link for $${amountDollars}: ${link.url}`);
+    // Only add setup_future_usage if user consented to saving card
+    if (saveCard) {
+      linkParams.payment_intent_data = {
+        setup_future_usage: 'off_session',
+        metadata: {
+          source: 'sms-rsvp',
+          phone: phone || '',
+          amount: String(amountDollars),
+          event: eventName || ''
+        }
+      };
+    } else {
+      linkParams.payment_intent_data = {
+        metadata: {
+          source: 'sms-rsvp',
+          phone: phone || '',
+          amount: String(amountDollars),
+          event: eventName || ''
+        }
+      };
+    }
+
+    const link = await stripe.paymentLinks.create(linkParams);
+    console.log(`[STRIPE] Created payment link for $${amountDollars} (saveCard:${saveCard}): ${link.url}`);
     return link.url;
 
   } catch (err) {
@@ -136,13 +148,34 @@ async function createPaymentLink(amountDollars, eventName, customerId = null, ph
   }
 }
 
-// ── DONATION CONFIRMATION TEXT ────────────────────────────────
-async function getDonationConfirmationText(amountDollars, donorName) {
+// ── RECEIPT CONFIRMATION TEXT ─────────────────────────────────
+// receiptType: 'donation' | 'event'
+// customMessage: editable from Settings tab
+async function getReceiptText(amountDollars, donorName, receiptType, customMessage) {
   const name = donorName ? `, ${donorName}` : '';
+  const closing = `\n\n— Rabbi Benjy & Hinda Silverman`;
+
+  // Use custom message from settings if provided
+  if (customMessage) {
+    return customMessage
+      .replace('{name}', donorName || '')
+      .replace('{amount}', `$${amountDollars}`)
+      + closing;
+  }
+
+  if (receiptType === 'event') {
+    return (
+      `❤️ Got it${name}! Your payment of $${amountDollars} has been received.\n\n` +
+      `We're looking forward to seeing you!` +
+      closing
+    );
+  }
+
+  // Default: donation
   return (
-    `🙏 Thank you${name}! Your donation of $${amountDollars} to Chabad of the Rivertowns has been received.\n\n` +
-    `Your generosity makes our community thrive. A tax receipt will be emailed to you.\n\n` +
-    `— Rabbi Benzion & Hinda Silverman`
+    `❤️ Thank you${name}! Your donation of $${amountDollars} to Chabad of the Rivertowns has been received.\n\n` +
+    `Your generosity makes our community thrive.` +
+    closing
   );
 }
 
@@ -151,5 +184,5 @@ module.exports = {
   getSavedCard,
   chargeCardOnFile,
   createPaymentLink,
-  getDonationConfirmationText
+  getReceiptText
 };
