@@ -1,77 +1,94 @@
-// import.js — CSV contact importer
-// Auto-creates any new list names found in the CSV
-
+// import.js — CSV contact importer with column mapping support
 const db = require('./db');
-const { getSettings, saveSettings } = require('./settings');
 
-function normalizePhone(raw) {
-  const digits = String(raw).replace(/[^0-9]/g, '');
-  if (digits.length === 10) return '+1' + digits;
-  if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
-  return null;
-}
+function importContacts(csv, mapping = {}, listId = null, listName = null) {
+  const lines = csv.trim().split('\n');
+  if (lines.length < 2) return { imported: 0 };
 
-function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) return [];
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z_]/g, ''));
-  const contacts = [];
+  const rawHeaders = parseCSVLine(lines[0]);
+
+  // mapping = { firstName: 2, lastName: 3, phone: 0, fullName: -1 }
+  // index -1 = skip / not mapped
+
+  let imported = 0;
+
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-    const values = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || line.split(',');
-    const row = {};
-    headers.forEach((h, idx) => { row[h] = (values[idx] || '').replace(/^"|"$/g, '').trim(); });
-    const phoneRaw = row.phone || row.cell || row.mobile || row.number || row.phone_number || row.cell_number || row.phonenumber || '';
-    const phone = normalizePhone(phoneRaw);
+
+    const values = parseCSVLine(line);
+
+    const getVal = (colIndex) => {
+      if (colIndex === undefined || colIndex === null || colIndex < 0) return '';
+      return (values[colIndex] || '').trim().replace(/^["']|["']$/g, '');
+    };
+
+    // Build name
+    let name = '';
+    if (mapping.fullName >= 0) {
+      name = getVal(mapping.fullName);
+    } else {
+      const first = getVal(mapping.firstName);
+      const last = getVal(mapping.lastName);
+      name = [first, last].filter(Boolean).join(' ');
+    }
+
+    // Clean phone
+    let phone = getVal(mapping.phone).replace(/[^\d+]/g, '');
     if (!phone) continue;
-    const firstName = row.first_name || row.firstname || row.first || row.fname || '';
-    const lastName = row.last_name || row.lastname || row.last || row.lname || '';
-    const fullName = row.name || row.full_name || row.fullname || [firstName, lastName].filter(Boolean).join(' ') || 'Guest';
-    const list = row.list || row.group || row.tag || 'all';
-    contacts.push({ phone, name: fullName, lists: [list] });
-  }
-  return contacts;
-}
+    if (!phone.startsWith('+')) {
+      if (phone.length === 10) phone = '+1' + phone;
+      else if (phone.length === 11 && phone.startsWith('1')) phone = '+' + phone;
+      else phone = '+1' + phone;
+    }
 
-function importContacts(csvText) {
-  const contacts = parseCSV(csvText);
-  const results = { imported: 0, skipped: 0, newLists: [], errors: [] };
-
-  // Auto-create any new lists found in the CSV
-  const settings = getSettings();
-  const existingListIds = new Set(settings.lists.map(l => l.id));
-  const listsToAdd = [];
-
-  for (const c of contacts) {
-    for (const listId of c.lists) {
-      if (listId !== 'all' && !existingListIds.has(listId) && !listsToAdd.find(l => l.id === listId)) {
-        // Convert id back to a readable name (e.g. "minyan_group" → "Minyan Group")
-        const name = listId.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
-        listsToAdd.push({ id: listId, name });
-        existingListIds.add(listId);
-        results.newLists.push(name);
+    // Lists
+    let lists = ['all'];
+    if (listId) {
+      lists = [listId];
+    } else if (mapping.list >= 0) {
+      const csvListName = getVal(mapping.list);
+      if (csvListName) {
+        const csvListId = csvListName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        lists = [csvListId];
       }
     }
+
+    db.saveContact(phone, { name, lists });
+    imported++;
   }
 
-  if (listsToAdd.length) {
-    const updatedLists = [...settings.lists, ...listsToAdd];
-    saveSettings({ lists: updatedLists });
-  }
-
-  // Save contacts
-  for (const c of contacts) {
-    try {
-      db.saveContact(c.phone, { name: c.name, lists: c.lists });
-      results.imported++;
-    } catch (err) {
-      results.skipped++;
-      results.errors.push(`${c.phone}: ${err.message}`);
-    }
-  }
-
-  return results;
+  return { imported };
 }
 
-module.exports = { importContacts, parseCSV };
+function getCSVHeaders(csv) {
+  const lines = csv.trim().split('\n');
+  if (!lines.length) return [];
+  return parseCSVLine(lines[0]).map(h => h.trim().replace(/^["']|["']$/g, ''));
+}
+
+function getCSVPreview(csv, maxRows = 3) {
+  const lines = csv.trim().split('\n');
+  const headers = parseCSVLine(lines[0]).map(h => h.trim().replace(/^["']|["']$/g, ''));
+  const rows = [];
+  for (let i = 1; i <= Math.min(maxRows, lines.length - 1); i++) {
+    if (lines[i].trim()) rows.push(parseCSVLine(lines[i]).map(v => v.trim().replace(/^["']|["']$/g, '')));
+  }
+  return { headers, rows, total: lines.length - 1 };
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') { inQuotes = !inQuotes; }
+    else if (char === ',' && !inQuotes) { result.push(current); current = ''; }
+    else { current += char; }
+  }
+  result.push(current);
+  return result;
+}
+
+module.exports = { importContacts, getCSVHeaders, getCSVPreview };
