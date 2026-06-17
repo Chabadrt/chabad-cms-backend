@@ -104,28 +104,67 @@
       <div class="form-group"><label>Confirmation Note <span class="hint">(sent after RSVP)</span></label><input type="text" id="evt-confirm" placeholder="Looking forward to seeing you! 🙏"></div>
     </div>
     <div class="card">
-      <div class="card-title">⚙️ Options</div>
-      <div class="toggle-row"><div><div style="font-size:14px;">Ask for donation</div><div style="font-size:12px;color:var(--muted);">Offer donation options after RSVP</div></div><div class="toggle on" id="tog-donation" onclick="this.classList.toggle('on');toggleDonationSettings()"></div></div>
+      <div class="card-title">⚙️ Event Type</div>
+
+      <!-- 4-way event type selector -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+        <label style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,255,255,0.04);border:2px solid var(--gold);border-radius:8px;padding:12px;cursor:pointer;" id="et-free_rsvp-lbl">
+          <input type="radio" name="event-type" value="free_rsvp" checked onchange="onEventTypeChange()" style="width:15px;height:15px;accent-color:var(--gold);margin-top:2px;">
+          <div><div style="font-size:13.5px;font-weight:500;">🎟️ Free — RSVP Only</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">No payment, just attendance</div></div>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px;cursor:pointer;" id="et-free_donation-lbl">
+          <input type="radio" name="event-type" value="free_donation" onchange="onEventTypeChange()" style="width:15px;height:15px;accent-color:var(--gold);margin-top:2px;">
+          <div><div style="font-size:13.5px;font-weight:500;">❤️ Free + Donation Ask</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Free to attend, optional donation</div></div>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px;cursor:pointer;" id="et-paid-lbl">
+          <input type="radio" name="event-type" value="paid" onchange="onEventTypeChange()" style="width:15px;height:15px;accent-color:var(--gold);margin-top:2px;">
+          <div><div style="font-size:13.5px;font-weight:500;">💳 Paid Event</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Ticket required, no donation ask</div></div>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px;cursor:pointer;" id="et-paid_donation-lbl">
+          <input type="radio" name="event-type" value="paid_donation" onchange="onEventTypeChange()" style="width:15px;height:15px;accent-color:var(--gold);margin-top:2px;">
+          <div><div style="font-size:13.5px;font-weight:500;">💳❤️ Paid + Donation</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Ticket required, then donation ask</div></div>
+        </label>
+      </div>
+
       <div class="toggle-row"><div><div style="font-size:14px;">Ask headcount</div><div style="font-size:12px;color:var(--muted);">How many people joining?</div></div><div class="toggle" id="tog-headcount" onclick="this.classList.toggle('on')"></div></div>
 
-      <!-- Per-event donation settings -->
-      <div id="donation-settings" style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);">
-        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Donation Settings for This Event</p>
+      <!-- Receipt type toggle -->
+      <div class="toggle-row">
+        <div><div style="font-size:14px;">Receipt type</div><div style="font-size:12px;color:var(--muted);">Confirmation SMS sent after payment</div></div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span style="font-size:12px;color:var(--muted);">Donation</span>
+          <div class="toggle" id="tog-receipt-type" onclick="this.classList.toggle('on');updateReceiptLabel()"></div>
+          <span style="font-size:12px;color:var(--muted);">Event Payment</span>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:10px;">
+        <label>Receipt Message <span class="hint" id="receipt-type-label">(Donation receipt — sent after payment)</span></label>
+        <textarea id="evt-receipt-msg" rows="2" placeholder="Leave blank for default. Use {name} and {amount} as placeholders."></textarea>
+      </div>
 
+      <!-- TICKET SETTINGS (paid events only) -->
+      <div id="ticket-settings" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Ticket Options</p>
+        <div id="ticket-options-list"></div>
+        <button class="btn btn-outline btn-sm" onclick="addTicketOption()" style="margin-top:10px;">+ Add Ticket Option</button>
+      </div>
+
+      <!-- DONATION SETTINGS (donation events only) -->
+      <div id="donation-settings" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Donation Settings</p>
         <div class="toggle-row" style="padding:8px 0;">
           <div><div style="font-size:13.5px;">Preset amounts</div><div style="font-size:12px;color:var(--muted);">Show fixed options (e.g. $5 / $10 / $18)</div></div>
           <div class="toggle on" id="tog-preset" onclick="this.classList.toggle('on');togglePresetAmounts()"></div>
         </div>
         <div id="preset-amounts-row" style="margin:10px 0 4px;">
           <div class="three-col">
-            <div class="form-group"><label>Amount 1</label><input type="number" id="amt1" value="5" placeholder="5" min="1"></div>
-            <div class="form-group"><label>Amount 2</label><input type="number" id="amt2" value="10" placeholder="10" min="1"></div>
-            <div class="form-group"><label>Amount 3 <span class="hint">(Chai)</span></label><input type="number" id="amt3" value="18" placeholder="18" min="1"></div>
+            <div class="form-group"><label>Amount 1</label><input type="number" id="amt1" value="5" min="1"></div>
+            <div class="form-group"><label>Amount 2</label><input type="number" id="amt2" value="10" min="1"></div>
+            <div class="form-group"><label>Amount 3 <span class="hint">(Chai)</span></label><input type="number" id="amt3" value="18" min="1"></div>
           </div>
         </div>
-
         <div class="toggle-row" style="padding:8px 0;">
-          <div><div style="font-size:13.5px;">Free-form amount</div><div style="font-size:12px;color:var(--muted);">Guest can type any amount they choose</div></div>
+          <div><div style="font-size:13.5px;">Free-form amount</div><div style="font-size:12px;color:var(--muted);">Guest can type any amount</div></div>
           <div class="toggle on" id="tog-freeform" onclick="this.classList.toggle('on')"></div>
         </div>
       </div>
@@ -925,10 +964,46 @@ async function saveContactLists() {
 }
 
 // ── DONATION SETTINGS ─────────────────────────────────────
-function toggleDonationSettings() {
-  const on = document.getElementById('tog-donation').classList.contains('on');
-  document.getElementById('donation-settings').style.display = on ? 'block' : 'none';
+// ── EVENT TYPE ────────────────────────────────────────────
+function onEventTypeChange() {
+  const type = document.querySelector('input[name="event-type"]:checked')?.value || 'free_rsvp';
+  const showTickets = type === 'paid' || type === 'paid_donation';
+  const showDonation = type === 'free_donation' || type === 'paid_donation';
+  document.getElementById('ticket-settings').style.display = showTickets ? 'block' : 'none';
+  document.getElementById('donation-settings').style.display = showDonation ? 'block' : 'none';
+  ['free_rsvp','free_donation','paid','paid_donation'].forEach(t => {
+    const lbl = document.getElementById('et-' + t + '-lbl');
+    if (lbl) lbl.style.borderColor = t === type ? 'var(--gold)' : 'rgba(201,168,76,0.2)';
+    if (lbl) lbl.style.borderWidth = t === type ? '2px' : '1px';
+  });
+  updatePreview();
 }
+
+let ticketOptions = [{ label: 'General Admission', price: '' }];
+
+function renderTicketOptions() {
+  const container = document.getElementById('ticket-options-list');
+  if (!container) return;
+  container.innerHTML = ticketOptions.map((t, i) => `
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+      <input type="text" value="${t.label}" placeholder="Ticket label (e.g. Adult)" style="flex:2;font-size:13px;" oninput="ticketOptions[${i}].label=this.value">
+      <div style="display:flex;align-items:center;gap:4px;flex:1;">
+        <span style="color:var(--muted);font-size:14px;">$</span>
+        <input type="number" value="${t.price}" placeholder="0" min="0" style="font-size:13px;" oninput="ticketOptions[${i}].price=parseFloat(this.value)||0">
+      </div>
+      ${ticketOptions.length > 1 ? `<button class="btn btn-danger btn-sm" onclick="removeTicketOption(${i})" style="padding:5px 10px;">✕</button>` : ''}
+    </div>`).join('');
+}
+
+function addTicketOption() { ticketOptions.push({ label: '', price: '' }); renderTicketOptions(); }
+function removeTicketOption(i) { ticketOptions.splice(i, 1); renderTicketOptions(); }
+
+function updateReceiptLabel() {
+  const isEvent = document.getElementById('tog-receipt-type')?.classList.contains('on');
+  const label = document.getElementById('receipt-type-label');
+  if (label) label.textContent = isEvent ? '(Event payment receipt — sent after payment)' : '(Donation receipt — sent after payment)';
+}
+
 function togglePresetAmounts() {
   const on = document.getElementById('tog-preset').classList.contains('on');
   document.getElementById('preset-amounts-row').style.display = on ? 'block' : 'none';
@@ -1026,15 +1101,20 @@ async function sendBlast() {
   if (!name || !date || !time) { notify('Please fill in event name, date, and time', true); return; }
   const customMessage = document.getElementById('evt-msg').value;
   const confirmationNote = document.getElementById('evt-confirm').value;
-  const askDonation = document.getElementById('tog-donation').classList.contains('on');
+  const eventType = document.querySelector('input[name="event-type"]:checked')?.value || 'free_rsvp';
   const askHeadcount = document.getElementById('tog-headcount').classList.contains('on');
-  const usePreset = document.getElementById('tog-preset').classList.contains('on');
-  const useFreeform = document.getElementById('tog-freeform').classList.contains('on');
-  const donationAmounts = usePreset ? [
+  const askDonation = eventType === 'free_donation' || eventType === 'paid_donation';
+  const receiptType = document.getElementById('tog-receipt-type')?.classList.contains('on') ? 'event' : 'donation';
+  const receiptMessage = document.getElementById('evt-receipt-msg')?.value.trim() || '';
+  const usePreset = document.getElementById('tog-preset')?.classList.contains('on');
+  const useFreeform = document.getElementById('tog-freeform')?.classList.contains('on');
+  const donationAmounts = (askDonation && usePreset) ? [
     parseInt(document.getElementById('amt1').value)||5,
     parseInt(document.getElementById('amt2').value)||10,
     parseInt(document.getElementById('amt3').value)||18,
   ] : [];
+  const tickets = (eventType === 'paid' || eventType === 'paid_donation')
+    ? ticketOptions.filter(t => t.label && t.price > 0) : [];
   let phones = [];
   if (sendMode === 'list') {
     const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
@@ -1048,7 +1128,9 @@ async function sendBlast() {
   const btn = document.getElementById('send-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending...';
   try {
-    const res = await fetch('/blast', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ event:{name,date,time,customMessage,confirmationNote,askDonation,askHeadcount,donationAmounts,useFreeform}, phones }) });
+    const res = await fetch('/blast', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ event:{name,date,time,customMessage,confirmationNote,eventType,askDonation,askHeadcount,donationAmounts,useFreeform,tickets,receiptType,receiptMessage}, phones }) });
+    // Save receipt settings for webhook
+    await fetch('/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...currentSettings, receiptType, receiptMessage}) });
     const data = await res.json();
     notify(`✅ Sent to ${data.sent} contact${data.sent!==1?'s':''}!${data.failed>0?` (${data.failed} failed)`:''}`);
   } catch(err) { notify('Error: '+err.message, true); }
@@ -1088,6 +1170,41 @@ async function loadRsvpsForEvent(eventId) {
     html+='</tbody></table>';
     document.getElementById('rsvp-table').innerHTML=html;
   } catch { document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load RSVPs.</p>'; }
+}
+
+// ── EXPORT RSVPs ──────────────────────────────────────────
+function exportRsvps() {
+  const sel = document.getElementById('event-selector');
+  const eventId = sel?.value;
+  const eventName = sel?.options[sel.selectedIndex]?.text || 'rsvps';
+  if (!eventId) { notify('Please select an event first.', true); return; }
+  const table = document.querySelector('#rsvp-table table');
+  if (!table) { notify('No RSVP data to export.', true); return; }
+  let csv = '';
+  table.querySelectorAll('tr').forEach(row => {
+    const cells = row.querySelectorAll('th, td');
+    csv += Array.from(cells).map(c => `"${c.innerText.replace(/"/g,'""')}"`).join(',') + '\n';
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${eventName.replace(/[^a-z0-9]/gi,'_')}_rsvps.csv`; a.click();
+  URL.revokeObjectURL(url);
+  notify('✅ RSVPs exported!');
+}
+
+// ── DELETE EVENT ──────────────────────────────────────────
+async function deleteEvent() {
+  const sel = document.getElementById('event-selector');
+  const eventId = sel?.value;
+  const eventName = sel?.options[sel.selectedIndex]?.text;
+  if (!eventId) { notify('Please select an event first.', true); return; }
+  if (!confirm(`Delete "${eventName}"?\n\nThis will permanently remove the event and all its RSVPs. Cannot be undone.`)) return;
+  try {
+    const res = await fetch(`/api/events/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
+    if (res.ok) { notify(`"${eventName}" deleted.`); loadEvents(); }
+    else { const err = await res.json(); notify('Error: ' + (err.error||'Failed'), true); }
+  } catch (err) { notify('Network error: ' + err.message, true); }
 }
 
 // ── INIT ──────────────────────────────────────────────────
