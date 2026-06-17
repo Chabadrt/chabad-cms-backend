@@ -104,53 +104,28 @@
       <div class="form-group"><label>Confirmation Note <span class="hint">(sent after RSVP)</span></label><input type="text" id="evt-confirm" placeholder="Looking forward to seeing you! 🙏"></div>
     </div>
     <div class="card">
-      <div class="card-title">⚙️ Event Type</div>
-
-      <!-- Event Type Selector -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;" id="event-type-grid">
-        <label style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px;cursor:pointer;transition:all 0.15s;" id="et-free-rsvp-lbl">
-          <input type="radio" name="event-type" value="free_rsvp" checked onchange="onEventTypeChange()" style="width:15px;height:15px;accent-color:var(--gold);margin-top:2px;">
-          <div><div style="font-size:13.5px;font-weight:500;">🎟️ Free — RSVP Only</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">No payment, just attendance tracking</div></div>
-        </label>
-        <label style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px;cursor:pointer;transition:all 0.15s;" id="et-free-donation-lbl">
-          <input type="radio" name="event-type" value="free_donation" onchange="onEventTypeChange()" style="width:15px;height:15px;accent-color:var(--gold);margin-top:2px;">
-          <div><div style="font-size:13.5px;font-weight:500;">❤️ Free + Donation Ask</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Free to attend, optional donation</div></div>
-        </label>
-        <label style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px;cursor:pointer;transition:all 0.15s;" id="et-paid-lbl">
-          <input type="radio" name="event-type" value="paid" onchange="onEventTypeChange()" style="width:15px;height:15px;accent-color:var(--gold);margin-top:2px;">
-          <div><div style="font-size:13.5px;font-weight:500;">💳 Paid Event</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Ticket required, no donation ask</div></div>
-        </label>
-        <label style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px;cursor:pointer;transition:all 0.15s;" id="et-paid-donation-lbl">
-          <input type="radio" name="event-type" value="paid_donation" onchange="onEventTypeChange()" style="width:15px;height:15px;accent-color:var(--gold);margin-top:2px;">
-          <div><div style="font-size:13.5px;font-weight:500;">💳❤️ Paid + Donation</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Ticket required, then donation ask</div></div>
-        </label>
-      </div>
-
+      <div class="card-title">⚙️ Options</div>
+      <div class="toggle-row"><div><div style="font-size:14px;">Ask for donation</div><div style="font-size:12px;color:var(--muted);">Offer donation options after RSVP</div></div><div class="toggle on" id="tog-donation" onclick="this.classList.toggle('on');toggleDonationSettings()"></div></div>
       <div class="toggle-row"><div><div style="font-size:14px;">Ask headcount</div><div style="font-size:12px;color:var(--muted);">How many people joining?</div></div><div class="toggle" id="tog-headcount" onclick="this.classList.toggle('on')"></div></div>
 
-      <!-- TICKET SETTINGS (shown for paid events) -->
-      <div id="ticket-settings" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);">
-        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Ticket Options</p>
-        <div id="ticket-options-list"></div>
-        <button class="btn btn-outline btn-sm" onclick="addTicketOption()" style="margin-top:10px;">+ Add Ticket Option</button>
-      </div>
-
-      <!-- DONATION SETTINGS (shown for donation events) -->
+      <!-- Per-event donation settings -->
       <div id="donation-settings" style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);">
-        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Donation Settings</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Donation Settings for This Event</p>
+
         <div class="toggle-row" style="padding:8px 0;">
-          <div><div style="font-size:13.5px;">Preset amounts</div><div style="font-size:12px;color:var(--muted);">Show fixed options</div></div>
+          <div><div style="font-size:13.5px;">Preset amounts</div><div style="font-size:12px;color:var(--muted);">Show fixed options (e.g. $5 / $10 / $18)</div></div>
           <div class="toggle on" id="tog-preset" onclick="this.classList.toggle('on');togglePresetAmounts()"></div>
         </div>
         <div id="preset-amounts-row" style="margin:10px 0 4px;">
           <div class="three-col">
-            <div class="form-group"><label>Amount 1</label><input type="number" id="amt1" value="5" min="1"></div>
-            <div class="form-group"><label>Amount 2</label><input type="number" id="amt2" value="10" min="1"></div>
-            <div class="form-group"><label>Amount 3 <span class="hint">(Chai)</span></label><input type="number" id="amt3" value="18" min="1"></div>
+            <div class="form-group"><label>Amount 1</label><input type="number" id="amt1" value="5" placeholder="5" min="1"></div>
+            <div class="form-group"><label>Amount 2</label><input type="number" id="amt2" value="10" placeholder="10" min="1"></div>
+            <div class="form-group"><label>Amount 3 <span class="hint">(Chai)</span></label><input type="number" id="amt3" value="18" placeholder="18" min="1"></div>
           </div>
         </div>
+
         <div class="toggle-row" style="padding:8px 0;">
-          <div><div style="font-size:13.5px;">Free-form amount</div><div style="font-size:12px;color:var(--muted);">Guest can type any amount</div></div>
+          <div><div style="font-size:13.5px;">Free-form amount</div><div style="font-size:12px;color:var(--muted);">Guest can type any amount they choose</div></div>
           <div class="toggle on" id="tog-freeform" onclick="this.classList.toggle('on')"></div>
         </div>
       </div>
@@ -197,16 +172,14 @@
     <div class="card" style="padding:16px 20px;margin-bottom:16px;">
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <label style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0;">Event</label>
-        <select id="event-selector" onchange="loadRsvpsForEvent(this.value)" style="flex:1;max-width:360px;"></select>
+        <select id="event-selector" onchange="loadRsvpsForEvent(this.value)" style="flex:1;max-width:400px;"></select>
         <button class="btn btn-outline btn-sm" onclick="loadEvents()">🔄 Refresh</button>
-        <button class="btn btn-sm" onclick="exportRsvps()" style="background:#1976d2;color:white;border:none;">📥 Export CSV</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteEvent()">🗑️ Delete</button>
       </div>
     </div>
-    <div class="stat-row" id="rsvp-stat-row">
+    <div class="stat-row">
       <div class="stat"><div class="stat-num" id="stat-yes">—</div><div class="stat-label">Attending ✓</div></div>
       <div class="stat"><div class="stat-num" id="stat-no">—</div><div class="stat-label">Can't make it</div></div>
-      <div class="stat"><div class="stat-num" id="stat-donations">—</div><div class="stat-label">Donations / Revenue</div></div>
+      <div class="stat"><div class="stat-num" id="stat-donations">—</div><div class="stat-label">Donations</div></div>
     </div>
     <div class="card">
       <div class="card-title"><span id="rsvp-title">📋 RSVPs</span></div>
@@ -238,7 +211,7 @@
     <!-- Import CSV -->
     <div class="card">
       <div class="card-title">⬆️ Import from CSV</div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Columns: <strong>first</strong>, <strong>last</strong> (or <strong>name</strong>), <strong>phone</strong>, <strong>list</strong>. Existing contacts are updated, not duplicated.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Upload any CSV file — you'll match the columns before importing.</p>
       <div class="upload-area" onclick="document.getElementById('csv-input').click()" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
         <div class="icon">📂</div>
         <p><strong>Click to upload</strong> or drag and drop your CSV</p>
@@ -251,8 +224,12 @@
     <div class="card">
       <div class="card-title">
         <span>👥 All Contacts</span>
-        <div style="display:flex;gap:8px;">
-          <input type="text" id="contacts-search" placeholder="🔍 Search..." oninput="filterContactsTable()" style="width:200px;padding:6px 10px;font-size:13px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <select id="contacts-filter" onchange="filterContactsTable()" style="padding:6px 10px;font-size:13px;width:auto;">
+            <option value="all">All Contacts</option>
+            <option value="unlisted">Not in any list</option>
+          </select>
+          <input type="text" id="contacts-search" placeholder="🔍 Search..." oninput="filterContactsTable()" style="width:150px;padding:6px 10px;font-size:13px;">
           <button class="btn btn-outline btn-sm" onclick="loadContacts()">🔄 Refresh</button>
         </div>
       </div>
@@ -315,6 +292,76 @@
   </div>
 </div>
 
+<!-- Delete Contact Modal -->
+<div class="modal-overlay" id="delete-contact-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:420px;">
+    <div class="modal-title">🗑️ Delete Contact</div>
+    <p id="delete-contact-info" style="font-size:14px;color:var(--cream);margin-bottom:8px;font-weight:500;"></p>
+    <div id="delete-contact-lists" style="font-size:13px;color:var(--muted);margin-bottom:20px;"></div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Choose an action:</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-outline" onclick="removeFromAllLists()" style="justify-content:space-between;">
+        <span>📋 Remove from all lists only</span><span style="font-size:11px;color:var(--muted);">stays in system</span>
+      </button>
+      <button class="btn btn-danger" onclick="deleteContactPermanently()" style="justify-content:space-between;">
+        <span>🗑️ Delete permanently</span><span style="font-size:11px;opacity:0.7;">cannot be undone</span>
+      </button>
+      <button class="btn btn-outline" onclick="document.getElementById('delete-contact-modal').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- CSV Column Mapping Modal -->
+<div class="modal-overlay" id="csv-mapping-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:660px;width:100%;">
+    <div class="modal-title">📂 Map Your CSV Columns</div>
+    <p id="csv-total-count" style="font-size:13px;color:var(--muted);margin-bottom:16px;"></p>
+    <p style="font-size:11.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Match your columns:</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;" id="csv-mapping-fields"></div>
+    <p style="font-size:11.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Preview (first 3 rows):</p>
+    <div style="overflow-x:auto;border:1px solid rgba(201,168,76,0.15);border-radius:8px;margin-bottom:20px;">
+      <table id="csv-preview-table" style="font-size:12px;min-width:100%;"></table>
+    </div>
+    <p style="font-size:11.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Add to list:</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;cursor:pointer;">
+        <input type="radio" name="csv-list-choice" value="existing" checked onchange="toggleCsvListOptions()" style="width:15px;height:15px;accent-color:var(--gold);"> Existing list
+      </label>
+      <select id="csv-existing-list" style="margin-left:23px;font-size:13px;max-width:280px;"></select>
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;cursor:pointer;margin-top:4px;">
+        <input type="radio" name="csv-list-choice" value="new" onchange="toggleCsvListOptions()" style="width:15px;height:15px;accent-color:var(--gold);"> Create new list
+      </label>
+      <input type="text" id="csv-new-list-name" placeholder="New list name..." style="margin-left:23px;font-size:13px;max-width:280px;display:none;">
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;cursor:pointer;margin-top:4px;">
+        <input type="radio" name="csv-list-choice" value="none" onchange="toggleCsvListOptions()" style="width:15px;height:15px;accent-color:var(--gold);"> Just All Contacts (no specific list)
+      </label>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-gold" onclick="confirmCsvImport()">📥 Import Now</button>
+      <button class="btn btn-outline" onclick="document.getElementById('csv-mapping-modal').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Manage Contacts in List Modal -->
+<div class="modal-overlay" id="bulk-remove-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:560px;">
+    <div class="modal-title">Contacts in: <span id="bulk-remove-list-name" style="color:var(--gold);"></span></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input type="text" id="bulk-remove-search" placeholder="🔍 Search..." oninput="filterBulkContacts()" style="font-size:13px;">
+      <button class="btn btn-outline btn-sm" onclick="selectAllBulk()">All</button>
+      <button class="btn btn-outline btn-sm" onclick="deselectAllBulk()">None</button>
+    </div>
+    <div id="bulk-remove-contacts" style="max-height:300px;overflow-y:auto;border:1px solid rgba(201,168,76,0.2);border-radius:8px;margin-bottom:16px;"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-outline btn-sm" onclick="confirmBulkRemove()">📋 Remove from list</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmBulkDelete()">🗑️ Delete permanently</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('bulk-remove-modal').style.display='none'">Cancel</button>
+      <span id="bulk-remove-count" style="font-size:13px;color:var(--muted);margin-left:auto;"></span>
+    </div>
+  </div>
+</div>
+
 <div class="notif" id="notif"><span id="notif-msg"></span></div>
 
 <script>
@@ -333,7 +380,7 @@ function showTab(name, el) {
   if (name === 'contacts') { loadContacts(); renderNewContactLists(); }
   if (name === 'settings') loadSettings();
   if (name === 'lists') loadListsTab();
-  if (name === 'blast') { loadListDropdown(true); loadContactCount(); }
+  if (name === 'blast') { loadListDropdown(); loadContactCount(); }
 }
 
 function notify(msg, isError=false) {
@@ -405,7 +452,7 @@ async function saveSettings() {
 }
 
 // ── LISTS ─────────────────────────────────────────────────
-function loadListDropdown(forceDefault = false) {
+function loadListDropdown() {
   const lists = getLists();
   const container = document.getElementById('list-checkboxes');
   if (!container) return;
@@ -415,12 +462,8 @@ function loadListDropdown(forceDefault = false) {
       ${l.name}
       <span id="lcount-${l.id}" style="font-size:11px;color:var(--muted);margin-left:auto;"></span>
     </label>`).join('');
-  const checkboxes = [...document.querySelectorAll('.list-checkbox')];
-  const testChk = checkboxes.find(c => c.parentElement.textContent.toLowerCase().includes('test'));
-  if (forceDefault || !checkboxes.some(c => c.checked)) {
-    if (testChk) testChk.checked = true;
-    else if (checkboxes.length) checkboxes[0].checked = true;
-  }
+  const checkboxes = document.querySelectorAll('.list-checkbox');
+  if (checkboxes.length && ![...checkboxes].some(c => c.checked)) checkboxes[0].checked = true;
   loadContactCount();
 }
 
@@ -447,19 +490,254 @@ function renderListsManager() {
   if (!lists.length) { container.innerHTML = '<p style="color:var(--muted);">No lists yet.</p>'; return; }
   container.innerHTML = lists.map(l => `
     <div class="list-item">
-      <input type="text" value="${l.name}" onchange="renameList('${l.id}', this.value)">
-      <span id="lmgr-count-${l.id}" style="font-size:12px;color:var(--muted);min-width:80px;text-align:right;"></span>
-      ${l.id === 'all' ? '<span style="font-size:12px;color:var(--muted);">default</span>' : `<button class="btn btn-danger btn-sm" onclick="removeList('${l.id}')">Remove</button>`}
+      <input type="text" value="${l.name}" onchange="renameList('${l.id}', this.value)" style="flex:1;">
+      <span id="lmgr-count-${l.id}" style="font-size:12px;color:var(--muted);min-width:60px;text-align:right;"></span>
+      ${l.id === 'all'
+        ? '<span style="font-size:12px;color:var(--muted);">default</span>'
+        : `<button class="btn btn-outline btn-sm" onclick="openBulkRemove('${l.id}','${l.name}')" style="white-space:nowrap;font-size:11.5px;">👥 Manage</button>
+           <button class="btn btn-danger btn-sm" onclick="removeList('${l.id}')" style="font-size:11.5px;">🗑️ Delete</button>`
+      }
     </div>`).join('');
   fetch('/contacts').then(r=>r.json()).then(contacts => {
     lists.forEach(l => {
       const el = document.getElementById('lmgr-count-' + l.id);
-      if (el) {
-        const n = l.id === 'all' ? contacts.length : contacts.filter(c => c.lists?.includes(l.id)).length;
-        el.textContent = n + ' contacts';
-      }
+      if (el) { const n = l.id==='all'?contacts.length:contacts.filter(c=>c.lists?.includes(l.id)).length; el.textContent = n+' contacts'; }
     });
-  }).catch(() => {});
+  }).catch(()=>{});
+}
+
+// ── DELETE SINGLE CONTACT ─────────────────────────────────
+let deletingPhone = null;
+
+function openDeleteContactModal(encodedPhone, name) {
+  deletingPhone = decodeURIComponent(encodedPhone);
+  const contact = allContacts.find(c => c.phone === deletingPhone);
+  document.getElementById('delete-contact-info').textContent = `${name || deletingPhone} · ${deletingPhone}`;
+  const lists = (contact?.lists || []).filter(l => l !== 'all');
+  const listNames = lists.map(lid => { const l = getLists().find(x=>x.id===lid); return l ? l.name : lid; });
+  document.getElementById('delete-contact-lists').innerHTML = listNames.length
+    ? `Currently in: <strong>${listNames.join(', ')}</strong>`
+    : `Not in any specific list.`;
+  document.getElementById('delete-contact-modal').style.display = 'flex';
+}
+
+async function removeFromAllLists() {
+  if (!deletingPhone) return;
+  try {
+    await fetch('/contacts/' + encodeURIComponent(deletingPhone), { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ lists: ['all'] }) });
+    document.getElementById('delete-contact-modal').style.display = 'none';
+    notify('✅ Removed from all lists.');
+    loadContacts(); loadContactCount();
+  } catch (err) { notify('Error: ' + err.message, true); }
+}
+
+async function deleteContactPermanently() {
+  if (!deletingPhone) return;
+  if (!confirm(`Permanently delete this contact?\n\n${deletingPhone}\n\nThis cannot be undone.`)) return;
+  try {
+    const res = await fetch('/contacts/' + encodeURIComponent(deletingPhone), { method: 'DELETE' });
+    if (res.ok) {
+      document.getElementById('delete-contact-modal').style.display = 'none';
+      notify('✅ Contact deleted permanently.');
+      loadContacts(); loadContactCount();
+    } else { const err = await res.json(); notify('Error: ' + (err.error||'Could not delete'), true); }
+  } catch (err) { notify('Error: ' + err.message, true); }
+}
+
+// ── BULK MANAGE CONTACTS IN LIST ──────────────────────────
+let bulkRemoveListId = null;
+let bulkRemoveContacts = [];
+
+function openBulkRemove(listId, listName) {
+  bulkRemoveListId = listId;
+  document.getElementById('bulk-remove-list-name').textContent = listName;
+  document.getElementById('bulk-remove-search').value = '';
+  document.getElementById('bulk-remove-modal').style.display = 'flex';
+  fetch('/contacts').then(r=>r.json()).then(contacts => {
+    bulkRemoveContacts = contacts.filter(c => (c.lists||[]).includes(listId));
+    renderBulkContacts(bulkRemoveContacts);
+  });
+}
+
+function renderBulkContacts(contacts) {
+  const container = document.getElementById('bulk-remove-contacts');
+  if (!contacts.length) { container.innerHTML = '<p style="color:var(--muted);padding:16px;font-size:13px;">No contacts in this list.</p>'; return; }
+  container.innerHTML = contacts.map(c => `
+    <label class="list-check-item" style="cursor:pointer;">
+      <input type="checkbox" value="${c.phone}" class="bulk-remove-check" onchange="updateBulkCount()" style="width:15px;height:15px;accent-color:var(--gold);">
+      <div>
+        <div style="font-size:13.5px;font-weight:500;">${c.name||'—'}</div>
+        <div style="font-size:11.5px;color:var(--muted);">${c.phone}</div>
+      </div>
+    </label>`).join('');
+  updateBulkCount();
+}
+
+function filterBulkContacts() {
+  const q = document.getElementById('bulk-remove-search').value.toLowerCase();
+  renderBulkContacts(bulkRemoveContacts.filter(c => (c.name||'').toLowerCase().includes(q) || c.phone.includes(q)));
+}
+
+function updateBulkCount() {
+  const n = document.querySelectorAll('.bulk-remove-check:checked').length;
+  document.getElementById('bulk-remove-count').textContent = n ? `${n} selected` : '';
+}
+
+function selectAllBulk() { document.querySelectorAll('.bulk-remove-check').forEach(c=>c.checked=true); updateBulkCount(); }
+function deselectAllBulk() { document.querySelectorAll('.bulk-remove-check').forEach(c=>c.checked=false); updateBulkCount(); }
+
+async function confirmBulkRemove() {
+  const phones = [...document.querySelectorAll('.bulk-remove-check:checked')].map(c => c.value);
+  if (!phones.length) { notify('No contacts selected.', true); return; }
+  const listName = document.getElementById('bulk-remove-list-name').textContent;
+  if (!confirm(`Remove ${phones.length} contact${phones.length!==1?'s':''} from "${listName}"?\n\nContacts will NOT be deleted.`)) return;
+  try {
+    const res = await fetch('/contacts/bulk-remove-from-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ phones, listId: bulkRemoveListId }) });
+    const data = await res.json();
+    if (data.success) {
+      notify(`✅ ${data.removed} contact${data.removed!==1?'s':''} removed from list.`);
+      document.getElementById('bulk-remove-modal').style.display = 'none';
+      loadContacts(); loadContactCount(); renderListsManager(); renderListSummary();
+    } else { notify('Error: ' + (data.error||'Failed'), true); }
+  } catch (err) { notify('Network error: ' + err.message, true); }
+}
+
+async function confirmBulkDelete() {
+  const phones = [...document.querySelectorAll('.bulk-remove-check:checked')].map(c => c.value);
+  if (!phones.length) { notify('No contacts selected.', true); return; }
+  if (!confirm(`Permanently DELETE ${phones.length} contact${phones.length!==1?'s':''}?\n\nThis cannot be undone.`)) return;
+  try {
+    const res = await fetch('/contacts/bulk-delete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ phones }) });
+    const data = await res.json();
+    if (data.success) {
+      notify(`✅ ${data.deleted} contact${data.deleted!==1?'s':''} permanently deleted.`);
+      document.getElementById('bulk-remove-modal').style.display = 'none';
+      loadContacts(); loadContactCount(); renderListsManager(); renderListSummary();
+    } else { notify('Error: ' + (data.error||'Failed'), true); }
+  } catch (err) { notify('Network error: ' + err.message, true); }
+}
+
+// ── CSV COLUMN MAPPING ────────────────────────────────────
+let pendingCsvData = null;
+let csvPreviewData = null;
+
+const CSV_FIELDS = [
+  { key: 'firstName', label: 'First Name' },
+  { key: 'lastName',  label: 'Last Name' },
+  { key: 'fullName',  label: 'Full Name (single column)' },
+  { key: 'phone',     label: '📞 Phone Number ✱ required' },
+  { key: 'list',      label: 'List (from CSV column)' },
+];
+
+function handleDrop(e) { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) processCSV(f); }
+function handleFileSelect(e) { const f = e.target.files[0]; if (f) processCSV(f); }
+
+async function processCSV(file) {
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    pendingCsvData = ev.target.result;
+    document.getElementById('import-result').innerHTML = '<p style="color:var(--gold);">Reading file...</p>';
+    try {
+      const res = await fetch('/contacts/csv-preview', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ csv: pendingCsvData }) });
+      csvPreviewData = await res.json();
+      openCsvMappingModal(csvPreviewData);
+      document.getElementById('import-result').innerHTML = '';
+    } catch (err) {
+      document.getElementById('import-result').innerHTML = `<p style="color:#f87171;">Error reading file: ${err.message}</p>`;
+    }
+  };
+  reader.readAsText(file);
+}
+
+function openCsvMappingModal(preview) {
+  const { headers, rows, total } = preview;
+  document.getElementById('csv-total-count').textContent = `${total} contact${total !== 1 ? 's' : ''} found in file`;
+  const skipOpt = `<option value="-1">— Skip —</option>`;
+  const headerOpts = headers.map((h, i) => `<option value="${i}">${h}</option>`).join('');
+  function autoDetect(kw) { return headers.findIndex(h => kw.some(k => h.toLowerCase().includes(k))); }
+  const autoMap = {
+    firstName: autoDetect(['first','fname','given']),
+    lastName:  autoDetect(['last','lname','surname','family']),
+    fullName:  autoDetect(['full name','fullname','contact name','name']),
+    phone:     autoDetect(['phone','mobile','cell','tel','number']),
+    list:      autoDetect(['list','group','tag','category']),
+  };
+  if (autoMap.firstName >= 0 || autoMap.lastName >= 0) autoMap.fullName = -1;
+  document.getElementById('csv-mapping-fields').innerHTML = CSV_FIELDS.map(f => `
+    <div>
+      <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;display:block;">${f.label}</label>
+      <select id="map-${f.key}" style="font-size:13px;" onchange="updateCsvPreview()">
+        ${skipOpt}${headerOpts}
+      </select>
+    </div>`).join('');
+  CSV_FIELDS.forEach(f => { const sel = document.getElementById('map-' + f.key); if (sel && autoMap[f.key] >= 0) sel.value = autoMap[f.key]; });
+  updateCsvPreview();
+  const listSel = document.getElementById('csv-existing-list');
+  listSel.innerHTML = getLists().filter(l => l.id !== 'all').map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+  document.querySelector('input[name="csv-list-choice"][value="existing"]').checked = true;
+  toggleCsvListOptions();
+  document.getElementById('csv-mapping-modal').style.display = 'flex';
+}
+
+function updateCsvPreview() {
+  if (!csvPreviewData) return;
+  const { headers, rows } = csvPreviewData;
+  const mapping = {};
+  CSV_FIELDS.forEach(f => { const s = document.getElementById('map-'+f.key); if (s) mapping[f.key] = parseInt(s.value); });
+  const mappedCols = new Set(Object.values(mapping).filter(v => v >= 0));
+  const mapLabels = {};
+  CSV_FIELDS.forEach(f => { if (mapping[f.key] >= 0) mapLabels[mapping[f.key]] = f.label.replace('📞 ','').replace(' ✱ required',''); });
+  let html = '<thead><tr>';
+  headers.forEach((h, i) => {
+    const m = mappedCols.has(i);
+    html += `<th style="padding:7px 10px;font-size:10px;${m?'background:rgba(201,168,76,0.15);color:var(--gold);':'color:var(--muted);'}">${h}${m?`<br><span style="font-size:9px;opacity:0.7;">→ ${mapLabels[i]}</span>`:''}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+  rows.forEach(row => {
+    html += '<tr>';
+    row.forEach((v, i) => { html += `<td style="padding:6px 10px;${mappedCols.has(i)?'color:var(--cream);':'color:var(--muted);opacity:0.5;'}">${v||'—'}</td>`; });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('csv-preview-table').innerHTML = html;
+}
+
+function toggleCsvListOptions() {
+  const choice = document.querySelector('input[name="csv-list-choice"]:checked')?.value;
+  document.getElementById('csv-existing-list').style.display = choice === 'existing' ? 'block' : 'none';
+  document.getElementById('csv-new-list-name').style.display = choice === 'new' ? 'block' : 'none';
+}
+
+async function confirmCsvImport() {
+  if (!pendingCsvData) return;
+  const mapping = {};
+  CSV_FIELDS.forEach(f => { const s = document.getElementById('map-'+f.key); if (s) mapping[f.key] = parseInt(s.value); });
+  if (mapping.phone < 0) { notify('Please map the Phone Number column.', true); return; }
+  const choice = document.querySelector('input[name="csv-list-choice"]:checked')?.value;
+  let listId = null, listName = null;
+  if (choice === 'existing') {
+    const sel = document.getElementById('csv-existing-list');
+    listId = sel.value; listName = sel.options[sel.selectedIndex]?.text;
+  } else if (choice === 'new') {
+    listName = document.getElementById('csv-new-list-name').value.trim();
+    if (!listName) { notify('Please enter a list name.', true); return; }
+    listId = listName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const lists = getLists();
+    if (!lists.find(l => l.id === listId)) { lists.push({ id: listId, name: listName }); await saveSettingsData({ lists }); loadListDropdown(false); renderNewContactLists(); }
+  }
+  document.getElementById('csv-mapping-modal').style.display = 'none';
+  document.getElementById('import-result').innerHTML = '<p style="color:var(--gold);"><span class="spinner"></span> Importing...</p>';
+  try {
+    const res = await fetch('/contacts/import', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ csv: pendingCsvData, mapping, listId, listName }) });
+    const data = await res.json();
+    document.getElementById('import-result').innerHTML = `<p style="color:#4ade80;">✅ ${data.imported} contacts imported${listName?' into "'+listName+'"':''}!</p>`;
+    notify(`✅ ${data.imported} contacts imported!`);
+    pendingCsvData = null; csvPreviewData = null;
+    document.getElementById('csv-input').value = '';
+    loadContacts(); loadContactCount();
+  } catch (err) {
+    document.getElementById('import-result').innerHTML = `<p style="color:#f87171;">Error: ${err.message}</p>`;
+  }
 }
 
 function renderListSummary() {
@@ -514,23 +792,41 @@ async function loadContacts() {
   try {
     const res = await fetch('/contacts');
     allContacts = await res.json();
-    renderContactsTable(allContacts);
+    populateContactsFilter();
+    filterContactsTable();
   } catch { document.getElementById('contacts-table').innerHTML='<p style="color:#f87171;">Could not load contacts.</p>'; }
 }
 
+function populateContactsFilter() {
+  const sel = document.getElementById('contacts-filter');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="all">All Contacts</option><option value="unlisted">Not in any list</option>';
+  getLists().filter(l => l.id !== 'all').forEach(l => {
+    const opt = document.createElement('option');
+    opt.value = l.id; opt.textContent = l.name;
+    sel.appendChild(opt);
+  });
+  sel.value = current || 'all';
+}
+
 function renderContactsTable(contacts) {
-  if (!contacts.length) { document.getElementById('contacts-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No contacts yet.</p>'; return; }
+  if (!contacts.length) { document.getElementById('contacts-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No contacts found.</p>'; return; }
   let html = `<p style="font-size:13px;color:var(--muted);margin-bottom:10px;">${contacts.length} contact${contacts.length!==1?'s':''}</p>`;
   html += '<table><thead><tr><th>Name</th><th>Phone</th><th>Lists</th><th></th></tr></thead><tbody>';
   for (const c of contacts) {
     const lists = (c.lists||[]).filter(l=>l!=='all');
     const listNames = lists.map(lid => { const l = getLists().find(x=>x.id===lid); return l ? l.name : lid; }).join(', ') || '—';
     const phone = encodeURIComponent(c.phone);
+    const nameSafe = (c.name||'').replace(/'/g,"\\'");
     html += `<tr>
       <td>${c.name||'—'}</td>
       <td style="font-size:12px;">${c.phone}</td>
       <td style="font-size:12px;">${listNames}</td>
-      <td><button class="btn btn-outline btn-sm" onclick="openEditModal('${phone}','${(c.name||'').replace(/'/g,"\\'")}')">Edit Lists</button></td>
+      <td style="display:flex;gap:6px;">
+        <button class="btn btn-outline btn-sm" onclick="openEditModal('${phone}','${nameSafe}')">Edit Lists</button>
+        <button class="btn btn-danger btn-sm" onclick="openDeleteContactModal('${phone}','${nameSafe}')" title="Delete">🗑️</button>
+      </td>
     </tr>`;
   }
   html += '</tbody></table>';
@@ -538,8 +834,16 @@ function renderContactsTable(contacts) {
 }
 
 function filterContactsTable() {
-  const q = document.getElementById('contacts-search').value.toLowerCase();
-  renderContactsTable(allContacts.filter(c => (c.name||'').toLowerCase().includes(q) || c.phone.includes(q)));
+  const q = (document.getElementById('contacts-search')?.value || '').toLowerCase();
+  const filter = document.getElementById('contacts-filter')?.value || 'all';
+  let filtered = allContacts;
+  if (filter === 'unlisted') {
+    filtered = filtered.filter(c => (c.lists||[]).filter(l => l !== 'all').length === 0);
+  } else if (filter !== 'all') {
+    filtered = filtered.filter(c => (c.lists||[]).includes(filter));
+  }
+  if (q) filtered = filtered.filter(c => (c.name||'').toLowerCase().includes(q) || c.phone.includes(q));
+  renderContactsTable(filtered);
 }
 
 async function createAndSelectList() {
@@ -620,48 +924,11 @@ async function saveContactLists() {
   } catch { notify('Could not update contact', true); }
 }
 
-// ── EVENT TYPE ────────────────────────────────────────────
-function onEventTypeChange() {
-  const type = document.querySelector('input[name="event-type"]:checked')?.value || 'free_rsvp';
-  const showTickets = type === 'paid' || type === 'paid_donation';
-  const showDonation = type === 'free_donation' || type === 'paid_donation';
-  document.getElementById('ticket-settings').style.display = showTickets ? 'block' : 'none';
-  document.getElementById('donation-settings').style.display = showDonation ? 'block' : 'none';
-  // Highlight selected card
-  ['free_rsvp','free_donation','paid','paid_donation'].forEach(t => {
-    const lbl = document.getElementById('et-' + t.replace('_','-') + '-lbl');
-    if (lbl) lbl.style.borderColor = t === type ? 'var(--gold)' : 'rgba(201,168,76,0.2)';
-  });
-  updatePreview();
+// ── DONATION SETTINGS ─────────────────────────────────────
+function toggleDonationSettings() {
+  const on = document.getElementById('tog-donation').classList.contains('on');
+  document.getElementById('donation-settings').style.display = on ? 'block' : 'none';
 }
-
-let ticketOptions = [{ label: 'General Admission', price: '' }];
-
-function renderTicketOptions() {
-  const container = document.getElementById('ticket-options-list');
-  container.innerHTML = ticketOptions.map((t, i) => `
-    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
-      <input type="text" value="${t.label}" placeholder="Ticket label (e.g. Adult)" style="flex:2;font-size:13px;"
-        oninput="ticketOptions[${i}].label = this.value">
-      <div style="display:flex;align-items:center;gap:4px;flex:1;">
-        <span style="color:var(--muted);font-size:14px;">$</span>
-        <input type="number" value="${t.price}" placeholder="0" min="0" style="font-size:13px;"
-          oninput="ticketOptions[${i}].price = parseFloat(this.value)||0">
-      </div>
-      ${ticketOptions.length > 1 ? `<button class="btn btn-danger btn-sm" onclick="removeTicketOption(${i})" style="padding:5px 10px;">✕</button>` : ''}
-    </div>`).join('');
-}
-
-function addTicketOption() {
-  ticketOptions.push({ label: '', price: '' });
-  renderTicketOptions();
-}
-
-function removeTicketOption(i) {
-  ticketOptions.splice(i, 1);
-  renderTicketOptions();
-}
-
 function togglePresetAmounts() {
   const on = document.getElementById('tog-preset').classList.contains('on');
   document.getElementById('preset-amounts-row').style.display = on ? 'block' : 'none';
@@ -759,21 +1026,15 @@ async function sendBlast() {
   if (!name || !date || !time) { notify('Please fill in event name, date, and time', true); return; }
   const customMessage = document.getElementById('evt-msg').value;
   const confirmationNote = document.getElementById('evt-confirm').value;
-  const eventType = document.querySelector('input[name="event-type"]:checked')?.value || 'free_rsvp';
+  const askDonation = document.getElementById('tog-donation').classList.contains('on');
   const askHeadcount = document.getElementById('tog-headcount').classList.contains('on');
-  const askDonation = eventType === 'free_donation' || eventType === 'paid_donation';
-  const usePreset = document.getElementById('tog-preset')?.classList.contains('on');
-  const useFreeform = document.getElementById('tog-freeform')?.classList.contains('on');
-  const donationAmounts = (askDonation && usePreset) ? [
+  const usePreset = document.getElementById('tog-preset').classList.contains('on');
+  const useFreeform = document.getElementById('tog-freeform').classList.contains('on');
+  const donationAmounts = usePreset ? [
     parseInt(document.getElementById('amt1').value)||5,
     parseInt(document.getElementById('amt2').value)||10,
     parseInt(document.getElementById('amt3').value)||18,
   ] : [];
-  // Build tickets for paid events
-  const tickets = (eventType === 'paid' || eventType === 'paid_donation')
-    ? ticketOptions.filter(t => t.label && t.price > 0)
-    : [];
-
   let phones = [];
   if (sendMode === 'list') {
     const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
@@ -787,7 +1048,7 @@ async function sendBlast() {
   const btn = document.getElementById('send-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending...';
   try {
-    const res = await fetch('/blast', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ event:{name,date,time,customMessage,confirmationNote,eventType,askDonation,askHeadcount,donationAmounts,useFreeform,tickets}, phones }) });
+    const res = await fetch('/blast', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ event:{name,date,time,customMessage,confirmationNote,askDonation,askHeadcount,donationAmounts,useFreeform}, phones }) });
     const data = await res.json();
     notify(`✅ Sent to ${data.sent} contact${data.sent!==1?'s':''}!${data.failed>0?` (${data.failed} failed)`:''}`);
   } catch(err) { notify('Error: '+err.message, true); }
@@ -809,111 +1070,24 @@ async function loadEvents() {
 async function loadRsvpsForEvent(eventId) {
   if (!eventId) return;
   try {
-    const [rsvpRes, eventsRes] = await Promise.all([fetch('/rsvps/' + eventId), fetch('/events')]);
-    const rsvps = await rsvpRes.json();
-    const events = await eventsRes.json();
-    const event = events.find(e => e.id === eventId);
-    const isPaid = event?.eventType === 'paid' || event?.eventType === 'paid_donation';
-
+    const res = await fetch('/rsvps/' + eventId);
+    const rsvps = await res.json();
     const sel = document.getElementById('event-selector');
     document.getElementById('rsvp-title').textContent = '📋 ' + (sel.options[sel.selectedIndex]?.text || 'Event');
-
-    if (!rsvps.length) {
-      ['stat-yes','stat-no','stat-donations'].forEach(id => document.getElementById(id).textContent = id==='stat-donations'?'$0':'0');
-      document.getElementById('rsvp-table').innerHTML = '<p style="color:var(--muted);padding:16px 0;">No RSVPs yet.</p>';
-      return;
-    }
-
+    if (!rsvps.length) { ['stat-yes','stat-no','stat-donations'].forEach(id=>document.getElementById(id).textContent=id==='stat-donations'?'$0':'0'); document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No RSVPs yet.</p>'; return; }
     document.getElementById('stat-yes').textContent = rsvps.filter(r=>r.status==='yes').length;
     document.getElementById('stat-no').textContent = rsvps.filter(r=>r.status==='no').length;
-    const ticketRev = rsvps.reduce((s,r)=>s+(r.ticketPrice||0),0);
     const donations = rsvps.reduce((s,r)=>s+(r.donationAmount||0),0);
-    const total = ticketRev + donations;
-    document.getElementById('stat-donations').textContent = total ? `$${total}` : '$0';
-
-    // Build table columns based on event type
-    let headers = '<tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th>';
-    if (isPaid) headers += '<th>Ticket</th><th>Payment</th>';
-    headers += '<th>Donation</th></tr>';
-
-    let html = `<table><thead>${headers}</thead><tbody>`;
-    for (const r of rsvps) {
-      const badge = r.status==='yes'?'badge-yes':r.status==='no'?'badge-no':'';
-      const label = r.status==='yes'?'✓ Yes':r.status==='no'?'✗ No':'⏳';
-      html += `<tr>
-        <td>${r.name||'—'}</td>
-        <td style="font-size:12px;">${r.phone}</td>
-        <td><span class="badge ${badge}">${label}</span></td>
-        <td>${r.guestCount||'—'}</td>`;
-      if (isPaid) {
-        const ticketDisplay = r.ticketType ? `${r.ticketType} ($${r.ticketPrice||0})` : '—';
-        const payBadge = r.paymentStatus === 'paid'
-          ? '<span class="badge badge-yes">✅ Paid</span>'
-          : r.paymentStatus === 'pending'
-            ? '<span class="badge" style="background:rgba(234,179,8,0.15);color:#fbbf24;">⏳ Pending</span>'
-            : '—';
-        html += `<td style="font-size:12px;">${ticketDisplay}</td><td>${payBadge}</td>`;
-      }
-      html += `<td>${r.donationAmount?'$'+r.donationAmount:'—'}</td></tr>`;
+    document.getElementById('stat-donations').textContent = donations ? `$${donations}` : '$0';
+    let html='<table><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th><th>Donation</th></tr></thead><tbody>';
+    for(const r of rsvps){
+      const badge=r.status==='yes'?'badge-yes':r.status==='no'?'badge-no':'';
+      const label=r.status==='yes'?'✓ Yes':r.status==='no'?'✗ No':'⏳';
+      html+=`<tr><td>${r.name||'—'}</td><td>${r.phone}</td><td><span class="badge ${badge}">${label}</span></td><td>${r.guestCount||'—'}</td><td>${r.donationAmount?'$'+r.donationAmount:'—'}</td></tr>`;
     }
-    html += '</tbody></table>';
-    document.getElementById('rsvp-table').innerHTML = html;
+    html+='</tbody></table>';
+    document.getElementById('rsvp-table').innerHTML=html;
   } catch { document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load RSVPs.</p>'; }
-}
-
-// ── EXPORT RSVPs ──────────────────────────────────────────
-function exportRsvps() {
-  const sel = document.getElementById('event-selector');
-  const eventId = sel?.value;
-  const eventName = sel?.options[sel.selectedIndex]?.text || 'rsvps';
-  if (!eventId) { notify('Please select an event first.', true); return; }
-  const table = document.querySelector('#rsvp-table table');
-  if (!table) { notify('No RSVP data to export.', true); return; }
-  let csv = '';
-  table.querySelectorAll('tr').forEach(row => {
-    const cells = row.querySelectorAll('th, td');
-    csv += Array.from(cells).map(c => `"${c.innerText.replace(/"/g,'""')}"`).join(',') + '\n';
-  });
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${eventName.replace(/[^a-z0-9]/gi,'_')}_rsvps.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  notify('✅ RSVPs exported!');
-}
-
-// ── DELETE EVENT ──────────────────────────────────────────
-async function deleteEvent() {
-  const sel = document.getElementById('event-selector');
-  const eventId = sel?.value;
-  const eventName = sel?.options[sel.selectedIndex]?.text;
-  if (!eventId) { notify('Please select an event first.', true); return; }
-  if (!confirm(`Delete "${eventName}"?\n\nThis will permanently remove the event and all its RSVPs. Cannot be undone.`)) return;
-  try {
-    const res = await fetch(`/api/events/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
-    if (res.ok) { notify(`"${eventName}" deleted.`); loadEvents(); }
-    else { const err = await res.json(); notify('Error: ' + (err.error||'Failed'), true); }
-  } catch (err) { notify('Network error: ' + err.message, true); }
-}
-
-// ── FILE UPLOAD ───────────────────────────────────────────
-function handleDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f)processCSV(f);}
-function handleFileSelect(e){const f=e.target.files[0];if(f)processCSV(f);}
-function processCSV(file){
-  const reader=new FileReader();
-  reader.onload=async(e)=>{
-    document.getElementById('import-result').innerHTML='<p style="color:var(--gold);">Importing...</p>';
-    try{
-      const res=await fetch('/contacts/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv:e.target.result})});
-      const data=await res.json();
-      document.getElementById('import-result').innerHTML=`<p style="color:#4ade80;">✅ ${data.imported} contacts imported!</p>`;
-      notify(`✅ ${data.imported} contacts imported!`);
-      loadContacts();loadContactCount();
-    }catch(err){document.getElementById('import-result').innerHTML=`<p style="color:#f87171;">Error: ${err.message}</p>`;}
-  };
-  reader.readAsText(file);
 }
 
 // ── INIT ──────────────────────────────────────────────────
