@@ -4,26 +4,16 @@ const db = require('./db');
 function importContacts(csv, mapping = {}, listId = null, listName = null) {
   const lines = csv.trim().split('\n');
   if (lines.length < 2) return { imported: 0 };
-
   const rawHeaders = parseCSVLine(lines[0]);
-
-  // mapping = { firstName: 2, lastName: 3, phone: 0, fullName: -1 }
-  // index -1 = skip / not mapped
-
   let imported = 0;
-
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-
     const values = parseCSVLine(line);
-
     const getVal = (colIndex) => {
       if (colIndex === undefined || colIndex === null || colIndex < 0) return '';
       return (values[colIndex] || '').trim().replace(/^["']|["']$/g, '');
     };
-
-    // Build name
     let name = '';
     if (mapping.fullName >= 0) {
       name = getVal(mapping.fullName);
@@ -32,8 +22,6 @@ function importContacts(csv, mapping = {}, listId = null, listName = null) {
       const last = getVal(mapping.lastName);
       name = [first, last].filter(Boolean).join(' ');
     }
-
-    // Clean phone
     let phone = getVal(mapping.phone).replace(/[^\d+]/g, '');
     if (!phone) continue;
     if (!phone.startsWith('+')) {
@@ -41,8 +29,6 @@ function importContacts(csv, mapping = {}, listId = null, listName = null) {
       else if (phone.length === 11 && phone.startsWith('1')) phone = '+' + phone;
       else phone = '+1' + phone;
     }
-
-    // Lists
     let lists = ['all'];
     if (listId) {
       lists = [listId];
@@ -53,11 +39,9 @@ function importContacts(csv, mapping = {}, listId = null, listName = null) {
         lists = [csvListId];
       }
     }
-
     db.saveContact(phone, { name, lists });
     imported++;
   }
-
   return { imported };
 }
 
