@@ -13,9 +13,7 @@ function saveFile(name, data) {
   fs.writeFileSync(path.join(DATA_DIR, name + '.json'), JSON.stringify(data, null, 2));
 }
 
-// ── CONTACTS ──────────────────────────────────────────────
 function getContact(phone) { return loadFile('contacts')[phone] || null; }
-
 function saveContact(phone, data) {
   const contacts = loadFile('contacts');
   contacts[phone] = { ...contacts[phone], ...data, phone, updatedAt: new Date().toISOString() };
@@ -23,24 +21,17 @@ function saveContact(phone, data) {
   saveFile('contacts', contacts);
   return contacts[phone];
 }
-
 function getAllContacts() { return Object.values(loadFile('contacts')); }
-
-// ── DELETE SINGLE CONTACT ─────────────────────────────────
 function deleteContact(phone) {
   const contacts = loadFile('contacts');
   delete contacts[phone];
   saveFile('contacts', contacts);
 }
-
-// ── BULK DELETE CONTACTS ──────────────────────────────────
 function bulkDeleteContacts(phones) {
   const contacts = loadFile('contacts');
   phones.forEach(phone => delete contacts[phone]);
   saveFile('contacts', contacts);
 }
-
-// ── REMOVE CONTACTS FROM A LIST ───────────────────────────
 function removeContactsFromList(phones, listId) {
   const contacts = loadFile('contacts');
   phones.forEach(phone => {
@@ -53,22 +44,18 @@ function removeContactsFromList(phones, listId) {
   saveFile('contacts', contacts);
 }
 
-// ── CONVERSATIONS ──────────────────────────────────────────
 function getConversation(phone) { return loadFile('conversations')[phone] || { step: 'idle' }; }
-
 function saveConversation(phone, data) {
   const convs = loadFile('conversations');
   convs[phone] = { ...convs[phone], ...data, phone, updatedAt: new Date().toISOString() };
   saveFile('conversations', convs);
 }
-
 function clearConversation(phone) {
   const convs = loadFile('conversations');
   convs[phone] = { step: 'idle' };
   saveFile('conversations', convs);
 }
 
-// ── EVENTS ────────────────────────────────────────────────
 function saveEvent(event) { const events = loadFile('events'); events[event.id] = event; saveFile('events', events); }
 function getEvent(id) { return loadFile('events')[id] || null; }
 function getLatestEvent() {
@@ -77,7 +64,6 @@ function getLatestEvent() {
   return events.sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt))[0];
 }
 
-// ── RSVPs ─────────────────────────────────────────────────
 function saveRsvp(eventId, phone, data) {
   const rsvps = loadFile('rsvps');
   if (!rsvps[eventId]) rsvps[eventId] = {};
