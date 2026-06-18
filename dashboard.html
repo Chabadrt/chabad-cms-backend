@@ -211,14 +211,16 @@
     <div class="card" style="padding:16px 20px;margin-bottom:16px;">
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <label style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0;">Event</label>
-        <select id="event-selector" onchange="loadRsvpsForEvent(this.value)" style="flex:1;max-width:400px;"></select>
+        <select id="event-selector" onchange="loadRsvpsForEvent(this.value)" style="flex:1;max-width:360px;"></select>
         <button class="btn btn-outline btn-sm" onclick="loadEvents()">🔄 Refresh</button>
+        <button class="btn btn-sm" onclick="exportRsvps()" style="background:#1976d2;color:white;border:none;">📥 Export CSV</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEvent()">🗑️ Delete Event</button>
       </div>
     </div>
     <div class="stat-row">
       <div class="stat"><div class="stat-num" id="stat-yes">—</div><div class="stat-label">Attending ✓</div></div>
       <div class="stat"><div class="stat-num" id="stat-no">—</div><div class="stat-label">Can't make it</div></div>
-      <div class="stat"><div class="stat-num" id="stat-donations">—</div><div class="stat-label">Donations</div></div>
+      <div class="stat"><div class="stat-num" id="stat-donations">—</div><div class="stat-label">Donations / Revenue</div></div>
     </div>
     <div class="card">
       <div class="card-title"><span id="rsvp-title">📋 RSVPs</span></div>
@@ -419,7 +421,7 @@ function showTab(name, el) {
   if (name === 'contacts') { loadContacts(); renderNewContactLists(); }
   if (name === 'settings') loadSettings();
   if (name === 'lists') loadListsTab();
-  if (name === 'blast') { loadListDropdown(); loadContactCount(); }
+  if (name === 'blast') { loadListDropdown(true); loadContactCount(); }
 }
 
 function notify(msg, isError=false) {
@@ -491,7 +493,7 @@ async function saveSettings() {
 }
 
 // ── LISTS ─────────────────────────────────────────────────
-function loadListDropdown() {
+function loadListDropdown(forceDefault = false) {
   const lists = getLists();
   const container = document.getElementById('list-checkboxes');
   if (!container) return;
@@ -501,8 +503,12 @@ function loadListDropdown() {
       ${l.name}
       <span id="lcount-${l.id}" style="font-size:11px;color:var(--muted);margin-left:auto;"></span>
     </label>`).join('');
-  const checkboxes = document.querySelectorAll('.list-checkbox');
-  if (checkboxes.length && ![...checkboxes].some(c => c.checked)) checkboxes[0].checked = true;
+  const checkboxes = [...document.querySelectorAll('.list-checkbox')];
+  const testChk = checkboxes.find(c => c.parentElement.textContent.toLowerCase().includes('test'));
+  if (forceDefault || !checkboxes.some(c => c.checked)) {
+    if (testChk) testChk.checked = true;
+    else if (checkboxes.length) checkboxes[0].checked = true;
+  }
   loadContactCount();
 }
 
@@ -1152,23 +1158,49 @@ async function loadEvents() {
 async function loadRsvpsForEvent(eventId) {
   if (!eventId) return;
   try {
-    const res = await fetch('/rsvps/' + eventId);
-    const rsvps = await res.json();
+    const [rsvpRes, eventsRes] = await Promise.all([fetch('/rsvps/' + eventId), fetch('/events')]);
+    const rsvps = await rsvpRes.json();
+    const events = await eventsRes.json();
+    const event = events.find(e => e.id === eventId);
+    const isPaid = event?.eventType === 'paid' || event?.eventType === 'paid_donation';
     const sel = document.getElementById('event-selector');
     document.getElementById('rsvp-title').textContent = '📋 ' + (sel.options[sel.selectedIndex]?.text || 'Event');
-    if (!rsvps.length) { ['stat-yes','stat-no','stat-donations'].forEach(id=>document.getElementById(id).textContent=id==='stat-donations'?'$0':'0'); document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No RSVPs yet.</p>'; return; }
+    if (!rsvps.length) {
+      ['stat-yes','stat-no','stat-donations'].forEach(id => document.getElementById(id).textContent = id==='stat-donations'?'$0':'0');
+      document.getElementById('rsvp-table').innerHTML = '<p style="color:var(--muted);padding:16px 0;">No RSVPs yet.</p>';
+      return;
+    }
     document.getElementById('stat-yes').textContent = rsvps.filter(r=>r.status==='yes').length;
     document.getElementById('stat-no').textContent = rsvps.filter(r=>r.status==='no').length;
+    const ticketRev = rsvps.reduce((s,r)=>s+(r.ticketPrice||0),0);
     const donations = rsvps.reduce((s,r)=>s+(r.donationAmount||0),0);
-    document.getElementById('stat-donations').textContent = donations ? `$${donations}` : '$0';
-    let html='<table><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th><th>Donation</th></tr></thead><tbody>';
-    for(const r of rsvps){
-      const badge=r.status==='yes'?'badge-yes':r.status==='no'?'badge-no':'';
-      const label=r.status==='yes'?'✓ Yes':r.status==='no'?'✗ No':'⏳';
-      html+=`<tr><td>${r.name||'—'}</td><td>${r.phone}</td><td><span class="badge ${badge}">${label}</span></td><td>${r.guestCount||'—'}</td><td>${r.donationAmount?'$'+r.donationAmount:'—'}</td></tr>`;
+    document.getElementById('stat-donations').textContent = `$${ticketRev + donations}`;
+    // Dynamic columns based on event type
+    let headers = '<tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th>';
+    if (isPaid) headers += '<th>Ticket</th><th>Payment</th>';
+    headers += '<th>Donation</th></tr>';
+    let html = `<table><thead>${headers}</thead><tbody>`;
+    for (const r of rsvps) {
+      const badge = r.status==='yes'?'badge-yes':r.status==='no'?'badge-no':'';
+      const label = r.status==='yes'?'✓ Yes':r.status==='no'?'✗ No':'⏳';
+      html += `<tr>
+        <td>${r.name||'—'}</td>
+        <td style="font-size:12px;">${r.phone}</td>
+        <td><span class="badge ${badge}">${label}</span></td>
+        <td>${r.guestCount||'—'}</td>`;
+      if (isPaid) {
+        const ticketDisplay = r.ticketType ? `${r.ticketType} ($${r.ticketPrice||0})` : '—';
+        const payBadge = r.paymentStatus === 'paid'
+          ? '<span class="badge badge-yes">✅ Paid</span>'
+          : r.paymentStatus === 'pending'
+            ? '<span class="badge" style="background:rgba(234,179,8,0.15);color:#fbbf24;">⏳ Pending</span>'
+            : '—';
+        html += `<td style="font-size:12px;">${ticketDisplay}</td><td>${payBadge}</td>`;
+      }
+      html += `<td>${r.donationAmount?'$'+r.donationAmount:'—'}</td></tr>`;
     }
-    html+='</tbody></table>';
-    document.getElementById('rsvp-table').innerHTML=html;
+    html += '</tbody></table>';
+    document.getElementById('rsvp-table').innerHTML = html;
   } catch { document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load RSVPs.</p>'; }
 }
 
