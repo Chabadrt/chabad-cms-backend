@@ -165,16 +165,26 @@ async function handleIdle(phone, msg, contact, conv, s) {
 async function handleHeadcount(phone, msg, contact, conv, s) {
   const count = parseInt(msg.replace(/[^0-9]/g, ''));
   if (isNaN(count) || count < 1 || count > 50) return `Please reply with just a number (e.g. 2).`;
-  const event = db.getEvent(conv.eventId);
-  db.saveRsvp(conv.eventId, phone, { guestCount: count });
-  return await afterHeadcount(phone, contact, event, s, count, conv);
+  // Use getEvent first, fall back to getLatestEvent if missing
+  let event = conv.eventId ? db.getEvent(conv.eventId) : null;
+  if (!event) event = db.getLatestEvent();
+  const eventId = event?.id || conv.eventId;
+  db.saveRsvp(eventId, phone, { guestCount: count });
+  console.log(`[HEADCOUNT] eventType: ${event?.eventType}, tickets: ${JSON.stringify(event?.tickets)}`);
+  return await afterHeadcount(phone, contact, event, s, count, { ...conv, eventId });
 }
 
 // ── CENTRAL ROUTING AFTER HEADCOUNT ──────────────────────
 async function afterHeadcount(phone, contact, event, s, guestCount, conv = {}) {
+  // Safety: if event is missing, try to get it
+  if (!event) event = conv.eventId ? db.getEvent(conv.eventId) : db.getLatestEvent();
+  if (!event) { db.clearConversation(phone); return `You're all set! See you soon. 🙏`; }
+
   const isPaid = event?.eventType === 'paid' || event?.eventType === 'paid_donation';
   const hasDonation = event?.eventType === 'free_donation' || event?.eventType === 'paid_donation' || event?.askDonation;
   const tickets = event?.tickets || [];
+
+  console.log(`[ROUTING] eventType:${event.eventType} isPaid:${isPaid} hasDonation:${hasDonation} tickets:${tickets.length}`);
 
   if (isPaid && tickets.length > 0) {
     db.saveConversation(phone, { step: 'await_ticket_quantities', eventId: event.id, guestCount });
