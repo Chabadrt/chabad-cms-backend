@@ -1,10 +1,8 @@
-// import.js — CSV contact importer with column mapping support
 const db = require('./db');
 
 function importContacts(csv, mapping = {}, listId = null, listName = null) {
   const lines = csv.trim().split('\n');
   if (lines.length < 2) return { imported: 0 };
-  const rawHeaders = parseCSVLine(lines[0]);
   let imported = 0;
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -15,13 +13,8 @@ function importContacts(csv, mapping = {}, listId = null, listName = null) {
       return (values[colIndex] || '').trim().replace(/^["']|["']$/g, '');
     };
     let name = '';
-    if (mapping.fullName >= 0) {
-      name = getVal(mapping.fullName);
-    } else {
-      const first = getVal(mapping.firstName);
-      const last = getVal(mapping.lastName);
-      name = [first, last].filter(Boolean).join(' ');
-    }
+    if (mapping.fullName >= 0) { name = getVal(mapping.fullName); }
+    else { name = [getVal(mapping.firstName), getVal(mapping.lastName)].filter(Boolean).join(' '); }
     let phone = getVal(mapping.phone).replace(/[^\d+]/g, '');
     if (!phone) continue;
     if (!phone.startsWith('+')) {
@@ -30,25 +23,15 @@ function importContacts(csv, mapping = {}, listId = null, listName = null) {
       else phone = '+1' + phone;
     }
     let lists = ['all'];
-    if (listId) {
-      lists = [listId];
-    } else if (mapping.list >= 0) {
+    if (listId) { lists = [listId]; }
+    else if (mapping.list >= 0) {
       const csvListName = getVal(mapping.list);
-      if (csvListName) {
-        const csvListId = csvListName.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        lists = [csvListId];
-      }
+      if (csvListName) lists = [csvListName.toLowerCase().replace(/[^a-z0-9]/g, '_')];
     }
     db.saveContact(phone, { name, lists });
     imported++;
   }
   return { imported };
-}
-
-function getCSVHeaders(csv) {
-  const lines = csv.trim().split('\n');
-  if (!lines.length) return [];
-  return parseCSVLine(lines[0]).map(h => h.trim().replace(/^["']|["']$/g, ''));
 }
 
 function getCSVPreview(csv, maxRows = 3) {
@@ -62,9 +45,7 @@ function getCSVPreview(csv, maxRows = 3) {
 }
 
 function parseCSVLine(line) {
-  const result = [];
-  let current = '';
-  let inQuotes = false;
+  const result = []; let current = ''; let inQuotes = false;
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
     if (char === '"') { inQuotes = !inQuotes; }
@@ -75,4 +56,4 @@ function parseCSVLine(line) {
   return result;
 }
 
-module.exports = { importContacts, getCSVHeaders, getCSVPreview };
+module.exports = { importContacts, getCSVPreview };
