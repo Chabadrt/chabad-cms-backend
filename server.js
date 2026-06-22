@@ -34,7 +34,7 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
         const name = contact?.name ? contact.name.split(' ')[0] : null;
         const receiptText = await getReceiptText(amount, name, s.receiptType || 'donation', s.receiptMessage || null);
         await twilioClient.messages.create({ body: receiptText, from: process.env.TWILIO_PHONE_NUMBER, to: phone });
-        // Mark RSVP as paid if this was a ticket
+        // Mark RSVP as paid if ticket pending
         const rsvpsFile = path.join(__dirname, 'data', 'rsvps.json');
         if (fs.existsSync(rsvpsFile)) {
           const rsvps = JSON.parse(fs.readFileSync(rsvpsFile, 'utf8'));
@@ -74,17 +74,35 @@ app.post('/settings', (req, res) => {
 app.post('/sms/incoming', async (req, res) => {
   const from = req.body.From, body = req.body.Body;
   if (!from || !body) return res.status(400).send('Missing From or Body');
+
+  // Handle STOP — mark contact as unsubscribed
+  const msgLower = body.trim().toLowerCase();
+  if (['stop','unsubscribe','cancel','end','quit'].includes(msgLower)) {
+    db.saveContact(from, { unsubscribed: true, unsubscribedAt: new Date().toISOString() });
+    db.clearConversation(from);
+    console.log(`[STOP] ${from} unsubscribed`);
+    // Twilio handles the actual blocking — we just mark the record
+    return res.status(200).send('OK');
+  }
+
+  // Handle START — re-subscribe
+  if (['start','subscribe','yes'].includes(msgLower) ) {
+    db.saveContact(from, { unsubscribed: false });
+    return res.status(200).send('OK');
+  }
+
   try {
     const reply = await handleIncoming(from, body);
     console.log(`[SMS OUT] → ${from}: "${reply}"`);
     await twilioClient.messages.create({ body: reply, from: process.env.TWILIO_PHONE_NUMBER, to: from });
-    const msg = body.trim();
-    if (msg === '1' || msg === '2') {
+    // Admin notification on RSVP replies
+    if (body.trim() === '1' || body.trim() === '2') {
       const contact = db.getContact(from);
-      await twilioClient.messages.create({ body: `[RSVP] ${contact?.name || from} replied: ${msg === '1' ? '✅ YES' : '❌ No'}`, from: process.env.TWILIO_PHONE_NUMBER, to: process.env.ADMIN_PHONE }).catch(() => {});
+      const status = body.trim() === '1' ? '✅ YES' : '❌ No';
+      await twilioClient.messages.create({ body: `[RSVP] ${contact?.name || from} replied: ${status}`, from: process.env.TWILIO_PHONE_NUMBER, to: process.env.ADMIN_PHONE }).catch(() => {});
     }
     res.status(200).send('OK');
-  } catch (err) { console.error('[WEBHOOK ERROR]', err); res.status(500).send('Error'); }
+  } catch (err) { console.error('[INCOMING ERROR]', err); res.status(500).send('Error'); }
 });
 
 // ── BLAST ─────────────────────────────────────────────────────
@@ -94,15 +112,24 @@ app.post('/blast', async (req, res) => {
   const s = getSettings();
   const eventId = `evt_${Date.now()}`;
   db.saveEvent({ id: eventId, ...event, sentAt: new Date().toISOString(), sentTo: phones.length });
+
   const baseMsg = `${s.botIntro}\n\nWill you be joining us for ${event.name} ${event.date} @ ${event.time}?`;
   const suffix = (event.customMessage ? `\n\n${event.customMessage}` : '') + `\n\n${s.rsvpPrompt}`;
   let sent = 0, failed = 0;
+
   for (const phone of phones) {
     try {
+      // Skip unsubscribed contacts
       const contact = db.getContact(phone);
+      if (contact?.unsubscribed) { console.log(`[BLAST SKIP] ${phone} unsubscribed`); failed++; continue; }
+
       const firstName = contact?.name ? contact.name.split(' ')[0] : null;
       const msgBody = `${firstName ? 'Hi ' + firstName + '! ' : 'Hi! '}${baseMsg}${suffix}`;
       await twilioClient.messages.create({ body: msgBody, from: process.env.TWILIO_PHONE_NUMBER, to: phone });
+
+      // Save which event was most recently sent to this contact
+      db.saveContact(phone, { lastEventId: eventId, lastBlastAt: new Date().toISOString() });
+
       sent++;
       await new Promise(r => setTimeout(r, 50));
     } catch (err) { console.error(`[BLAST ERROR] ${phone}:`, err.message); failed++; }
@@ -160,12 +187,11 @@ app.get('/events', (req, res) => {
     res.json(Object.values(data).sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt)));
   } catch { res.json([]); }
 });
-
 app.delete('/api/events/:eventId', (req, res) => {
   try {
     const { eventId } = req.params;
     const eventsFile = path.join(__dirname, 'data', 'events.json');
-    const rsvpsFile  = path.join(__dirname, 'data', 'rsvps.json');
+    const rsvpsFile = path.join(__dirname, 'data', 'rsvps.json');
     if (fs.existsSync(eventsFile)) {
       const events = JSON.parse(fs.readFileSync(eventsFile, 'utf8'));
       if (!events[eventId]) return res.status(404).json({ error: 'Event not found' });
@@ -215,13 +241,13 @@ app.get('/api/donors', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── DONATION PAGES ────────────────────────────────────────────
+// ── PAGES ─────────────────────────────────────────────────────
 app.get('/donation-success', (req, res) => {
   const amount = req.query.amount || '';
-  res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Thank You!</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#f9f4ec;}.card{background:white;border-radius:12px;padding:40px;max-width:400px;margin:0 auto;box-shadow:0 2px 12px rgba(0,0,0,0.08);}h1{color:#1565c0;font-size:28px;}p{color:#555;font-size:16px;line-height:1.6;}.amount{font-size:32px;font-weight:bold;color:#1565c0;margin:16px 0;}</style></head><body><div class="card"><div style="font-size:60px;margin-bottom:16px">❤️</div><h1>Thank You!</h1><div class="amount">${amount ? '$'+amount : ''}</div><p>Your payment to Chabad of the Rivertowns has been received.</p><p style="margin-top:30px;color:#888;font-size:13px;">— Rabbi Benjy & Hinda Silverman</p></div></body></html>`);
+  res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Thank You!</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#f9f4ec;}.card{background:white;border-radius:12px;padding:40px;max-width:400px;margin:0 auto;box-shadow:0 2px 12px rgba(0,0,0,0.08);}h1{color:#1565c0;}p{color:#555;line-height:1.6;}.amount{font-size:32px;font-weight:bold;color:#1565c0;margin:16px 0;}</style></head><body><div class="card"><div style="font-size:60px;margin-bottom:16px">❤️</div><h1>Thank You!</h1><div class="amount">${amount?'$'+amount:''}</div><p>Your payment to Chabad of the Rivertowns has been received.</p><p style="margin-top:30px;color:#888;font-size:13px;">— Rabbi Benjy & Hinda Silverman</p></div></body></html>`);
 });
 app.get('/donation-cancel', (req, res) => {
-  res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>No Problem</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#f9f4ec;}.card{background:white;border-radius:12px;padding:40px;max-width:400px;margin:0 auto;}h1{color:#555;font-size:24px;}p{color:#777;font-size:15px;}</style></head><body><div class="card"><div style="font-size:50px;margin-bottom:16px">↩️</div><h1>No problem!</h1><p>Payment cancelled. Reply to any of our texts to try again.</p></div></body></html>`);
+  res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>No Problem</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#f9f4ec;}.card{background:white;border-radius:12px;padding:40px;max-width:400px;margin:0 auto;}h1{color:#555;}p{color:#777;}</style></head><body><div class="card"><div style="font-size:50px;margin-bottom:16px">↩️</div><h1>No problem!</h1><p>Payment cancelled. Reply to any of our texts to try again.</p></div></body></html>`);
 });
 
 const https = require('https');
