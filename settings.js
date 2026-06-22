@@ -1,9 +1,6 @@
-// settings.js — Loads and saves bot message settings
 const fs = require('fs');
 const path = require('path');
-
 const SETTINGS_FILE = path.join(__dirname, 'data', 'settings.json');
-
 const DEFAULTS = {
   botIntro: "This is Rabbi Benjy's new texting bot 🤖\n(yes, the Rabbi has been having a little too much fun with AI lately 😄)",
   rsvpPrompt: "Please reply with just a number:\n1 — I'll be there 🙏\n2 — Can't make it this time",
@@ -19,22 +16,17 @@ const DEFAULTS = {
   receiptType: 'donation',
   receiptMessage: ''
 };
-
 function getSettings() {
   try {
     if (!fs.existsSync(SETTINGS_FILE)) return { ...DEFAULTS };
-    const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
-    return { ...DEFAULTS, ...data };
+    return { ...DEFAULTS, ...JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')) };
   } catch { return { ...DEFAULTS }; }
 }
-
 function saveSettings(updates) {
   const dir = path.dirname(SETTINGS_FILE);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  const current = getSettings();
-  const merged = { ...current, ...updates };
+  const merged = { ...getSettings(), ...updates };
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(merged, null, 2));
   return merged;
 }
-
 module.exports = { getSettings, saveSettings };
