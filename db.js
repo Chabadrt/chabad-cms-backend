@@ -1,4 +1,3 @@
-// db.js — Simple file-based database using JSON
 const fs = require('fs');
 const path = require('path');
 const DATA_DIR = path.join(__dirname, 'data');
@@ -22,16 +21,8 @@ function saveContact(phone, data) {
   return contacts[phone];
 }
 function getAllContacts() { return Object.values(loadFile('contacts')); }
-function deleteContact(phone) {
-  const contacts = loadFile('contacts');
-  delete contacts[phone];
-  saveFile('contacts', contacts);
-}
-function bulkDeleteContacts(phones) {
-  const contacts = loadFile('contacts');
-  phones.forEach(phone => delete contacts[phone]);
-  saveFile('contacts', contacts);
-}
+function deleteContact(phone) { const c = loadFile('contacts'); delete c[phone]; saveFile('contacts', c); }
+function bulkDeleteContacts(phones) { const c = loadFile('contacts'); phones.forEach(p => delete c[p]); saveFile('contacts', c); }
 function removeContactsFromList(phones, listId) {
   const contacts = loadFile('contacts');
   phones.forEach(phone => {
