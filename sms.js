@@ -245,12 +245,19 @@ async function handleTicketQuantities(phone, msg, contact, conv, s) {
   for (const sel of selections) {
     const ticket = tickets[sel.ticketIndex];
     if (!ticket) continue;
-    const lineTotal = ticket.price * sel.qty;
+    const price = parseFloat(ticket.price) || 0; // ensure number not string
+    const lineTotal = price * sel.qty;
     total += lineTotal;
-    summaryLines.push(`${sel.qty}x ${ticket.label} @ $${ticket.price} = $${lineTotal}`);
+    summaryLines.push(`${sel.qty}x ${ticket.label} @ $${price} = $${lineTotal}`);
     ticketDesc.push(`${sel.qty}x ${ticket.label}`);
   }
   const descStr = ticketDesc.join(', ');
+  console.log(`[TICKETS] selections:${JSON.stringify(selections)} total:${total} desc:${descStr}`);
+
+  if (total <= 0) {
+    db.clearConversation(phone);
+    return `There was an issue with the ticket pricing. Please call (914) 330-1307 to complete your registration.\n\n${confirmationMessage(event, s)}`;
+  }
 
   db.saveRsvp(event.id, phone, { ticketType: descStr, ticketPrice: total, paymentStatus: 'pending' });
 
@@ -272,7 +279,15 @@ async function handleTicketQuantities(phone, msg, contact, conv, s) {
     );
   }
 
-  const link = await createPaymentLink(total, `${event.name} — ${descStr}`, customerId, phone, true);
+  let link;
+  try {
+    link = await createPaymentLink(total, `${event.name} — ${descStr}`, customerId, phone, true);
+  } catch (err) {
+    console.error('[TICKET LINK ERROR]', err.message);
+    db.clearConversation(phone);
+    return `Here's your order:\n${orderSummary}\n\nTo complete payment, please call (914) 330-1307 or visit chabadrt.org.\n\n${confirmationMessage(event, s)}`;
+  }
+
   db.saveRsvp(event.id, phone, { ticketPaymentLink: link });
 
   if (event.eventType === 'paid_donation') {
