@@ -62,32 +62,41 @@ function buildDonationMenu(event, s) {
 }
 
 // ── TICKET QUANTITY PARSER ────────────────────────────────
-// Handles: "Adults 2", "2 Adults", "Adult 2 Child 1", "2 1", "child 1", "3adults"
+// Handles: "Adult 2", "Adults 2", "Adult 2 Child 1", "2 1", "Child 1"
 function parseTicketQuantities(msg, tickets) {
   const m = msg.toLowerCase().trim();
   const selections = [];
 
   for (let i = 0; i < tickets.length; i++) {
-    // Normalize: lowercase, strip trailing s/es for plural matching
     const base = tickets[i].label.toLowerCase().replace(/e?s+$/, '');
 
-    // All patterns to try for this ticket label
-    const patterns = [
-      new RegExp(`(\\d+)\\s+${base}`, 'i'),       // "2 Adult"
-      new RegExp(`${base}\\w*\\s+(\\d+)`, 'i'),    // "Adults 2" or "Adult: 2"
-      new RegExp(`(\\d+)${base}`, 'i'),            // "2adult" (no space)
-      new RegExp(`${base}\\w*(\\d+)`, 'i'),        // "adult2" (no space)
-    ];
+    // Find the position of this ticket label in the message
+    const labelRe = new RegExp(`${base}\\w*`, 'i');
+    const labelMatch = m.match(labelRe);
+    if (!labelMatch) continue;
 
-    for (const re of patterns) {
-      const match = m.match(re);
-      if (match) {
-        const qty = parseInt(match[1]);
-        if (qty > 0 && !selections.find(s => s.ticketIndex === i)) {
-          selections.push({ ticketIndex: i, qty });
-        }
-        break;
-      }
+    const labelPos = m.indexOf(labelMatch[0]);
+    // Look for a number within 10 chars before or after the label
+    const before = m.substring(Math.max(0, labelPos - 5), labelPos);
+    const after = m.substring(labelPos + labelMatch[0].length, labelPos + labelMatch[0].length + 10);
+
+    const numAfter = after.match(/^\s*:?\s*(\d+)/);
+    const numBefore = before.match(/(\d+)\s*$/);
+
+    if (numAfter) {
+      const qty = parseInt(numAfter[1]);
+      if (qty > 0) selections.push({ ticketIndex: i, qty });
+    } else if (numBefore) {
+      const qty = parseInt(numBefore[1]);
+      // Make sure this number isn't already used by a previous ticket
+      const alreadyUsed = selections.some(s => {
+        const prevLabel = tickets[s.ticketIndex].label.toLowerCase();
+        const prevPos = m.indexOf(prevLabel);
+        const prevNumPos = m.indexOf(String(s.qty));
+        const thisNumPos = m.lastIndexOf(String(qty), labelPos);
+        return Math.abs(prevPos - thisNumPos) < Math.abs(labelPos - thisNumPos);
+      });
+      if (!alreadyUsed) selections.push({ ticketIndex: i, qty });
     }
   }
 
