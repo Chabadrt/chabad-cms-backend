@@ -93,16 +93,27 @@ app.post('/sms/incoming', async (req, res) => {
 
   try {
     const reply = await handleIncoming(from, body);
-    console.log(`[SMS OUT] → ${from}: "${reply}"`);
+    console.log(`[SMS OUT] → ${from}: "${reply.substring(0,80)}..."`);
     await twilioClient.messages.create({ body: reply, from: process.env.TWILIO_PHONE_NUMBER, to: from });
-    // Admin notification on RSVP replies
+    // Admin notification on initial RSVP replies
     if (body.trim() === '1' || body.trim() === '2') {
       const contact = db.getContact(from);
       const status = body.trim() === '1' ? '✅ YES' : '❌ No';
       await twilioClient.messages.create({ body: `[RSVP] ${contact?.name || from} replied: ${status}`, from: process.env.TWILIO_PHONE_NUMBER, to: process.env.ADMIN_PHONE }).catch(() => {});
     }
     res.status(200).send('OK');
-  } catch (err) { console.error('[INCOMING ERROR]', err); res.status(500).send('Error'); }
+  } catch (err) {
+    console.error('[INCOMING ERROR]', err.message, err.stack);
+    // Always send something back so the user isn't left hanging
+    try {
+      await twilioClient.messages.create({
+        body: `Sorry, something went wrong. Please try again or call (914) 330-1307.`,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: from
+      });
+    } catch (sendErr) { console.error('[FALLBACK SMS ERROR]', sendErr.message); }
+    res.status(200).send('OK');
+  }
 });
 
 // ── BLAST ─────────────────────────────────────────────────────
