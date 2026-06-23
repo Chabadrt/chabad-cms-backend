@@ -62,23 +62,38 @@ function buildDonationMenu(event, s) {
 }
 
 // ── TICKET QUANTITY PARSER ────────────────────────────────
-// Very forgiving: handles "2 1", "3 adult 1 child", "adult 2 child 1", "2adults1child"
+// Handles: "Adults 2", "2 Adults", "Adult 2 Child 1", "2 1", "child 1", "3adults"
 function parseTicketQuantities(msg, tickets) {
   const m = msg.toLowerCase().trim();
   const selections = [];
 
   for (let i = 0; i < tickets.length; i++) {
-    const base = tickets[i].label.toLowerCase().replace(/s+$/, '');
-    const re = new RegExp(`(\\d+)\\s*${base}s?|${base}s?\\s*:?\\s*(\\d+)`, 'i');
-    const match = m.match(re);
-    if (match) {
-      const qty = parseInt(match[1] || match[2]);
-      if (qty > 0) selections.push({ ticketIndex: i, qty });
+    // Normalize: lowercase, strip trailing s/es for plural matching
+    const base = tickets[i].label.toLowerCase().replace(/e?s+$/, '');
+
+    // All patterns to try for this ticket label
+    const patterns = [
+      new RegExp(`(\\d+)\\s+${base}`, 'i'),       // "2 Adult"
+      new RegExp(`${base}\\w*\\s+(\\d+)`, 'i'),    // "Adults 2" or "Adult: 2"
+      new RegExp(`(\\d+)${base}`, 'i'),            // "2adult" (no space)
+      new RegExp(`${base}\\w*(\\d+)`, 'i'),        // "adult2" (no space)
+    ];
+
+    for (const re of patterns) {
+      const match = m.match(re);
+      if (match) {
+        const qty = parseInt(match[1]);
+        if (qty > 0 && !selections.find(s => s.ticketIndex === i)) {
+          selections.push({ ticketIndex: i, qty });
+        }
+        break;
+      }
     }
   }
+
   if (selections.length > 0) return selections;
 
-  // Pure number sequence: "2 1" = 2 of ticket[0], 1 of ticket[1]
+  // Fallback: pure number sequence — "2 1" = 2 of first, 1 of second
   const nums = m.match(/\d+/g);
   if (nums && nums.length >= 1) {
     const result = [];
@@ -94,10 +109,16 @@ function parseTicketQuantities(msg, tickets) {
 
 function buildTicketMenu(tickets) {
   const lines = tickets.map((t, i) => `${String.fromCharCode(65 + i)}) ${t.label} — $${t.price}`).join('\n');
-  const example = tickets.length >= 2
-    ? `"${tickets[0].label} 2 ${tickets[1].label} 1"\nor just numbers: "2 1"`
-    : `"${tickets[0].label} 2" or just "2"`;
-  return `${lines}\n\nReply with quantities, e.g:\n${example}`;
+  // Build a clear example using actual ticket labels
+  let example = '';
+  if (tickets.length === 1) {
+    example = `e.g. "${tickets[0].label} 2" or just "2"`;
+  } else if (tickets.length === 2) {
+    example = `e.g. "${tickets[0].label} 2 ${tickets[1].label} 1"\nor just numbers: "2 1"`;
+  } else {
+    example = `e.g. "${tickets.map((t,i)=>`${t.label} ${i===0?2:1}`).join(' ')}"`;
+  }
+  return `${lines}\n\nHow many of each?\n${example}`;
 }
 
 // ── GET EVENT FOR PHONE ───────────────────────────────────
