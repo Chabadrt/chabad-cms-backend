@@ -254,8 +254,8 @@ async function handleTicketQuantities(phone, msg, contact, conv, s) {
 
   db.saveRsvp(event.id, phone, { ticketType: descStr, ticketPrice: total, paymentStatus: 'pending' });
 
-  const customerId = await getOrCreateCustomer(phone, contact?.name);
-  const savedCard = customerId ? await getSavedCard(customerId) : null;
+  const customerId = await getOrCreateCustomer(phone, contact?.name).catch(e => { console.error('[TICKET STRIPE]', e.message); return null; });
+  const savedCard = customerId ? await getSavedCard(customerId).catch(() => null) : null;
   const orderSummary = summaryLines.join('\n') + `\n\nTotal: $${total}`;
 
   if (savedCard) {
@@ -304,24 +304,44 @@ async function handleDonationDecision(phone, msg, contact, conv, s) {
   if (amount === 'skip') { db.clearConversation(phone); return confirmationMessage(event, s); }
   if (amount === null) return `I didn't catch that. Please reply with a number or amount:\n\n${buildDonationMenu(event, s)}`;
 
-  const customerId = await getOrCreateCustomer(phone, contact?.name);
-  const savedCard = customerId ? await getSavedCard(customerId) : null;
+  console.log(`[DONATION] amount:${amount} phone:${phone}`);
 
-  if (savedCard) {
-    const brandCap = savedCard.brand.charAt(0).toUpperCase() + savedCard.brand.slice(1);
-    db.saveConversation(phone, {
-      ...conv, step: 'await_card_confirm',
-      pendingAmount: amount, isTicket: false,
-      customerId, savedCard: { paymentMethodId: savedCard.paymentMethodId, brand: savedCard.brand, last4: savedCard.last4 }
-    });
-    return (
-      `We have your ${brandCap} card ending in ${savedCard.last4} on file.\n\nDonate $${amount}?\n\n` +
-      `1 — Yes, charge my saved card\n2 — Use a different card`
-    );
+  try {
+    const customerId = await getOrCreateCustomer(phone, contact?.name);
+    console.log(`[DONATION] customerId:${customerId}`);
+    const savedCard = customerId ? await getSavedCard(customerId) : null;
+    console.log(`[DONATION] savedCard:${savedCard ? savedCard.last4 : 'none'}`);
+
+    if (savedCard) {
+      const brandCap = savedCard.brand.charAt(0).toUpperCase() + savedCard.brand.slice(1);
+      db.saveConversation(phone, {
+        ...conv, step: 'await_card_confirm',
+        pendingAmount: amount, isTicket: false,
+        customerId, savedCard: { paymentMethodId: savedCard.paymentMethodId, brand: savedCard.brand, last4: savedCard.last4 }
+      });
+      return (
+        `We have your ${brandCap} card ending in ${savedCard.last4} on file.\n\nDonate $${amount}?\n\n` +
+        `1 — Yes, charge my saved card\n2 — Use a different card`
+      );
+    }
+
+    db.saveConversation(phone, { ...conv, step: 'await_save_card', pendingAmount: amount, customerId });
+    return `Would you like to save your card for next time?\n\n1 — Yes, save my card\n2 — No, just pay now`;
+
+  } catch (err) {
+    console.error(`[DONATION ERROR] ${err.message}`);
+    // Stripe failed — send payment link without customer tracking
+    try {
+      const link = await createPaymentLink(amount, event?.name || 'Chabad Event', null, phone, false);
+      db.saveRsvp(event?.id || conv.eventId, phone, { donationAmount: amount });
+      db.clearConversation(phone);
+      return `${s.donationThankYou || 'Here\'s your secure payment link:'}\n🔗 ${link}\n\n${confirmationMessage(event, s)}`;
+    } catch (linkErr) {
+      console.error(`[DONATION LINK ERROR] ${linkErr.message}`);
+      db.clearConversation(phone);
+      return `Thank you! To complete your donation of $${amount}, please visit chabadrivertowns.com/donate or call (914) 330-1307.\n\n${confirmationMessage(event, s)}`;
+    }
   }
-
-  db.saveConversation(phone, { ...conv, step: 'await_save_card', pendingAmount: amount, customerId });
-  return `Would you like to save your card for next time?\n\n1 — Yes, save my card\n2 — No, just pay now`;
 }
 
 async function handleSaveCardConsent(phone, msg, contact, conv, s) {
@@ -335,15 +355,20 @@ async function handleSaveCardConsent(phone, msg, contact, conv, s) {
   if (!isYes && !isNo) return `Please reply:\n1 — Yes, save my card\n2 — No, just pay now`;
 
   db.saveContact(phone, { cardSaveConsent: isYes });
-  const link = await createPaymentLink(pendingAmount, event?.name || 'Chabad Event', customerId, phone, isYes);
-  db.saveRsvp(event?.id || conv.eventId, phone, { donationAmount: pendingAmount });
-  db.clearConversation(phone);
-
-  return (
-    `${s.donationThankYou || 'Great! Here\'s your secure payment link:'}\n🔗 ${link}\n` +
-    (isYes ? `\n💳 Your card will be saved for next time!\n` : '') +
-    `\n${confirmationMessage(event, s)}`
-  );
+  try {
+    const link = await createPaymentLink(pendingAmount, event?.name || 'Chabad Event', customerId, phone, isYes);
+    db.saveRsvp(event?.id || conv.eventId, phone, { donationAmount: pendingAmount });
+    db.clearConversation(phone);
+    return (
+      `${s.donationThankYou || 'Great! Here\'s your secure payment link:'}\n🔗 ${link}\n` +
+      (isYes ? `\n💳 Your card will be saved for next time!\n` : '') +
+      `\n${confirmationMessage(event, s)}`
+    );
+  } catch (err) {
+    console.error('[PAYMENT LINK ERROR]', err.message);
+    db.clearConversation(phone);
+    return `Thank you! To complete your payment of $${pendingAmount}, please visit chabadrivertowns.com/donate or call (914) 330-1307.\n\n${confirmationMessage(event, s)}`;
+  }
 }
 
 async function handleCardConfirm(phone, msg, contact, conv, s) {
