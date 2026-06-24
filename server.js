@@ -6,13 +6,13 @@ const fs = require('fs');
 const { handleIncoming } = require('./sms');
 const { importContacts } = require('./import');
 const { getSettings, saveSettings } = require('./settings');
-const { getReceiptText } = require('./payments');
+const { getReceiptText, createPaymentLink } = require('./payments');
 const db = require('./db');
 
 const app = express();
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-// ── STRIPE WEBHOOK (must come BEFORE express.json()) ──────────
+// ── STRIPE WEBHOOK (must come BEFORE express.json()) ──────
 app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
   const sig = req.headers['stripe-signature'];
@@ -23,34 +23,97 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
     console.error(`[WEBHOOK] Signature failed: ${err.message}`);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
+
   if (event.type === 'payment_intent.succeeded') {
     const intent = event.data.object;
     const phone = intent.metadata?.phone;
     const amount = intent.amount / 100;
+    console.log(`[WEBHOOK] Payment $${amount} from ${phone}`);
+
     if (phone) {
       try {
         const s = getSettings();
         const contact = db.getContact(phone);
-        const name = contact?.name ? contact.name.split(' ')[0] : null;
-        const receiptText = await getReceiptText(amount, name, s.receiptType || 'donation', s.receiptMessage || null);
-        await twilioClient.messages.create({ body: receiptText, from: process.env.TWILIO_PHONE_NUMBER, to: phone });
-        // Mark RSVP as paid if ticket pending
-        const rsvpsFile = path.join(__dirname, 'data', 'rsvps.json');
-        if (fs.existsSync(rsvpsFile)) {
-          const rsvps = JSON.parse(fs.readFileSync(rsvpsFile, 'utf8'));
-          Object.keys(rsvps).forEach(eventId => {
-            if (rsvps[eventId][phone]?.paymentStatus === 'pending') {
-              rsvps[eventId][phone].paymentStatus = 'paid';
-              rsvps[eventId][phone].paidAt = new Date().toISOString();
-            }
+        const firstName = contact?.name ? contact.name.split(' ')[0] : null;
+        const conv = db.getConversation(phone);
+
+        // ── CHANGE 3 & 4 ─────────────────────────────────
+        // Determine what was just paid based on conversation state
+
+        if (conv.step === 'await_ticket_payment') {
+          // Paid event only — send ticket receipt + confirmation
+          const receiptText = await getReceiptText(amount, firstName, 'event', s.receiptMessage || null);
+          const eventObj = conv.eventId ? db.getEvent(conv.eventId) : db.getLatestEvent();
+          const confirmation = eventObj
+            ? `You're all set! See you at ${eventObj.name} ${eventObj.date} @ ${eventObj.time}. ${s.confirmationNote || ''}`.trim()
+            : `You're all set! See you soon.`;
+          await twilioClient.messages.create({
+            body: `${receiptText}\n\n${confirmation}`,
+            from: process.env.TWILIO_PHONE_NUMBER, to: phone
           });
-          fs.writeFileSync(rsvpsFile, JSON.stringify(rsvps, null, 2));
+          // Mark RSVP paid
+          markRsvpPaid(phone, conv.eventId, amount);
+          db.clearConversation(phone);
+
+        } else if (conv.step === 'await_donation_after_ticket') {
+          // Paid + Donation — ticket just paid, now send receipt + start donation flow
+          const receiptText = await getReceiptText(amount, firstName, 'event', s.receiptMessage || null);
+          await twilioClient.messages.create({
+            body: receiptText,
+            from: process.env.TWILIO_PHONE_NUMBER, to: phone
+          });
+          // Mark ticket paid
+          markRsvpPaid(phone, conv.eventId, amount);
+          // Now trigger donation flow
+          const eventObj = conv.eventId ? db.getEvent(conv.eventId) : db.getLatestEvent();
+          if (eventObj) {
+            const donationMenu = buildDonationMenu(eventObj, s);
+            const donationAsk = s.donationAsk || 'Would you like to make a donation to support our programs?';
+            db.saveConversation(phone, { step: 'await_donation_decision', eventId: conv.eventId });
+            await twilioClient.messages.create({
+              body: `${donationAsk}\n\n${donationMenu}`,
+              from: process.env.TWILIO_PHONE_NUMBER, to: phone
+            });
+          }
+
+        } else if (conv.step === 'await_donation_payment') {
+          // Donation paid — send donation receipt + final confirmation
+          const receiptText = await getReceiptText(amount, firstName, 'donation', s.receiptMessage || null);
+          const eventObj = conv.eventId ? db.getEvent(conv.eventId) : db.getLatestEvent();
+          const confirmation = eventObj
+            ? `You're all set! See you at ${eventObj.name} ${eventObj.date} @ ${eventObj.time}. ${s.confirmationNote || ''}`.trim()
+            : `You're all set! See you soon.`;
+          await twilioClient.messages.create({
+            body: `${receiptText}\n\n${confirmation}`,
+            from: process.env.TWILIO_PHONE_NUMBER, to: phone
+          });
+          db.saveRsvp(conv.eventId || db.getLatestEvent()?.id, phone, { donationAmount: amount });
+          db.clearConversation(phone);
+
+        } else {
+          // Fallback — generic receipt for any other payment
+          const receiptText = await getReceiptText(amount, firstName, s.receiptType || 'donation', s.receiptMessage || null);
+          await twilioClient.messages.create({
+            body: receiptText,
+            from: process.env.TWILIO_PHONE_NUMBER, to: phone
+          });
+          markRsvpPaid(phone, conv.eventId, amount);
+          db.clearConversation(phone);
         }
-      } catch (smsErr) { console.error(`[WEBHOOK] Receipt SMS failed:`, smsErr.message); }
+
+        console.log(`[WEBHOOK] SMS sent to ${phone}`);
+      } catch (smsErr) {
+        console.error(`[WEBHOOK] SMS failed:`, smsErr.message);
+      }
+
+      // Admin notification
       if (process.env.ADMIN_PHONE) {
         try {
           const contact = db.getContact(phone);
-          await twilioClient.messages.create({ body: `💰 Payment received: $${amount} from ${contact?.name || phone}`, from: process.env.TWILIO_PHONE_NUMBER, to: process.env.ADMIN_PHONE });
+          await twilioClient.messages.create({
+            body: `💰 Payment $${amount} from ${contact?.name || phone}`,
+            from: process.env.TWILIO_PHONE_NUMBER, to: process.env.ADMIN_PHONE
+          });
         } catch (err) { console.error(`[WEBHOOK] Admin notify failed:`, err.message); }
       }
     }
@@ -58,7 +121,38 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
   res.json({ received: true });
 });
 
-// ── STANDARD MIDDLEWARE ───────────────────────────────────────
+// Helper: build donation menu (mirrors sms.js logic)
+function buildDonationMenu(event, s) {
+  const amounts = event?.donationAmounts || [5, 10, 18];
+  const useFreeform = event?.useFreeform !== false;
+  let menu = '';
+  if (amounts.length > 0) {
+    amounts.forEach((amt, i) => {
+      const label = amt === 18 ? `$18 (Chai ✡️)` : `$${amt}`;
+      menu += `${i + 1} — ${label}\n`;
+    });
+  }
+  if (useFreeform) menu += `Or reply with any amount (e.g. $36)\n`;
+  menu += `N — No thank you`;
+  return menu;
+}
+
+// Helper: mark RSVP as paid
+function markRsvpPaid(phone, eventId, amount) {
+  try {
+    const rsvpsFile = path.join(__dirname, 'data', 'rsvps.json');
+    if (!fs.existsSync(rsvpsFile)) return;
+    const rsvps = JSON.parse(fs.readFileSync(rsvpsFile, 'utf8'));
+    const targetEventId = eventId || Object.keys(rsvps).find(eid => rsvps[eid][phone]);
+    if (targetEventId && rsvps[targetEventId]?.[phone]) {
+      rsvps[targetEventId][phone].paymentStatus = 'paid';
+      rsvps[targetEventId][phone].paidAt = new Date().toISOString();
+      fs.writeFileSync(rsvpsFile, JSON.stringify(rsvps, null, 2));
+    }
+  } catch (err) { console.error('[MARK PAID]', err.message); }
+}
+
+// ── STANDARD MIDDLEWARE ───────────────────────────────────
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
@@ -66,36 +160,36 @@ app.get('/', (req, res) => res.json({ status: 'ok', name: 'Chabad Rivertowns SMS
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 app.get('/settings', (req, res) => res.json(getSettings()));
 app.post('/settings', (req, res) => {
-  try { const updated = saveSettings(req.body); res.json({ success: true, settings: updated }); }
+  try { res.json({ success: true, settings: saveSettings(req.body) }); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── INCOMING SMS ──────────────────────────────────────────────
+// ── INCOMING SMS ──────────────────────────────────────────
 app.post('/sms/incoming', async (req, res) => {
   const from = req.body.From, body = req.body.Body;
   if (!from || !body) return res.status(400).send('Missing From or Body');
 
-  // Handle STOP — mark contact as unsubscribed
   const msgLower = body.trim().toLowerCase();
+
+  // STOP — mark unsubscribed
   if (['stop','unsubscribe','cancel','end','quit'].includes(msgLower)) {
     db.saveContact(from, { unsubscribed: true, unsubscribedAt: new Date().toISOString() });
     db.clearConversation(from);
     console.log(`[STOP] ${from} unsubscribed`);
-    // Twilio handles the actual blocking — we just mark the record
     return res.status(200).send('OK');
   }
 
-  // Handle START — re-subscribe
-  if (['start','subscribe','yes'].includes(msgLower) ) {
+  // START — re-subscribe
+  if (msgLower === 'start') {
     db.saveContact(from, { unsubscribed: false });
     return res.status(200).send('OK');
   }
 
   try {
     const reply = await handleIncoming(from, body);
-    console.log(`[SMS OUT] → ${from}: "${reply.substring(0,80)}..."`);
+    console.log(`[SMS OUT] → ${from}: "${reply.substring(0, 80)}..."`);
     await twilioClient.messages.create({ body: reply, from: process.env.TWILIO_PHONE_NUMBER, to: from });
-    // Admin notification on initial RSVP replies
+    // Admin notification on initial RSVP
     if (body.trim() === '1' || body.trim() === '2') {
       const contact = db.getContact(from);
       const status = body.trim() === '1' ? '✅ YES' : '❌ No';
@@ -104,43 +198,34 @@ app.post('/sms/incoming', async (req, res) => {
     res.status(200).send('OK');
   } catch (err) {
     console.error('[INCOMING ERROR]', err.message, err.stack);
-    // Always send something back so the user isn't left hanging
     try {
       await twilioClient.messages.create({
         body: `Sorry, something went wrong. Please try again or call (914) 330-1307.`,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: from
+        from: process.env.TWILIO_PHONE_NUMBER, to: from
       });
-    } catch (sendErr) { console.error('[FALLBACK SMS ERROR]', sendErr.message); }
+    } catch (e) { console.error('[FALLBACK SMS ERROR]', e.message); }
     res.status(200).send('OK');
   }
 });
 
-// ── BLAST ─────────────────────────────────────────────────────
+// ── BLAST ─────────────────────────────────────────────────
 app.post('/blast', async (req, res) => {
   const { event, phones } = req.body;
   if (!event || !phones?.length) return res.status(400).json({ error: 'Missing event or phones' });
   const s = getSettings();
   const eventId = `evt_${Date.now()}`;
   db.saveEvent({ id: eventId, ...event, sentAt: new Date().toISOString(), sentTo: phones.length });
-
   const baseMsg = `${s.botIntro}\n\nWill you be joining us for ${event.name} ${event.date} @ ${event.time}?`;
   const suffix = (event.customMessage ? `\n\n${event.customMessage}` : '') + `\n\n${s.rsvpPrompt}`;
   let sent = 0, failed = 0;
-
   for (const phone of phones) {
     try {
-      // Skip unsubscribed contacts
       const contact = db.getContact(phone);
-      if (contact?.unsubscribed) { console.log(`[BLAST SKIP] ${phone} unsubscribed`); failed++; continue; }
-
+      if (contact?.unsubscribed) { failed++; continue; }
       const firstName = contact?.name ? contact.name.split(' ')[0] : null;
       const msgBody = `${firstName ? 'Hi ' + firstName + '! ' : 'Hi! '}${baseMsg}${suffix}`;
       await twilioClient.messages.create({ body: msgBody, from: process.env.TWILIO_PHONE_NUMBER, to: phone });
-
-      // Save which event was most recently sent to this contact
       db.saveContact(phone, { lastEventId: eventId, lastBlastAt: new Date().toISOString() });
-
       sent++;
       await new Promise(r => setTimeout(r, 50));
     } catch (err) { console.error(`[BLAST ERROR] ${phone}:`, err.message); failed++; }
@@ -148,7 +233,7 @@ app.post('/blast', async (req, res) => {
   res.json({ success: true, eventId, sent, failed });
 });
 
-// ── CONTACTS ──────────────────────────────────────────────────
+// ── CONTACTS ──────────────────────────────────────────────
 app.get('/contacts', (req, res) => res.json(db.getAllContacts()));
 app.post('/contacts', (req, res) => {
   const { phone, name, lists } = req.body;
@@ -190,7 +275,7 @@ app.post('/contacts/csv-preview', (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── EVENTS ────────────────────────────────────────────────────
+// ── EVENTS ────────────────────────────────────────────────
 app.get('/events', (req, res) => {
   const eventsFile = path.join(__dirname, 'data', 'events.json');
   try {
@@ -218,7 +303,7 @@ app.delete('/api/events/:eventId', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── RSVPs ─────────────────────────────────────────────────────
+// ── RSVPs ─────────────────────────────────────────────────
 app.get('/rsvps/latest', (req, res) => {
   const event = db.getLatestEvent();
   if (!event) return res.json({ event: null, rsvps: [] });
@@ -226,7 +311,7 @@ app.get('/rsvps/latest', (req, res) => {
 });
 app.get('/rsvps/:eventId', (req, res) => res.json(db.getRsvpsForEvent(req.params.eventId)));
 
-// ── DONORS ────────────────────────────────────────────────────
+// ── DONORS ────────────────────────────────────────────────
 app.get('/api/donors', async (req, res) => {
   try {
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -252,13 +337,10 @@ app.get('/api/donors', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── PAGES ─────────────────────────────────────────────────────
+// ── PAGES ─────────────────────────────────────────────────
 app.get('/donation-success', (req, res) => {
   const amount = req.query.amount || '';
   res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Thank You!</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#f9f4ec;}.card{background:white;border-radius:12px;padding:40px;max-width:400px;margin:0 auto;box-shadow:0 2px 12px rgba(0,0,0,0.08);}h1{color:#1565c0;}p{color:#555;line-height:1.6;}.amount{font-size:32px;font-weight:bold;color:#1565c0;margin:16px 0;}</style></head><body><div class="card"><div style="font-size:60px;margin-bottom:16px">❤️</div><h1>Thank You!</h1><div class="amount">${amount?'$'+amount:''}</div><p>Your payment to Chabad of the Rivertowns has been received.</p><p style="margin-top:30px;color:#888;font-size:13px;">— Rabbi Benjy & Hinda Silverman</p></div></body></html>`);
-});
-app.get('/donation-cancel', (req, res) => {
-  res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>No Problem</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#f9f4ec;}.card{background:white;border-radius:12px;padding:40px;max-width:400px;margin:0 auto;}h1{color:#555;}p{color:#777;}</style></head><body><div class="card"><div style="font-size:50px;margin-bottom:16px">↩️</div><h1>No problem!</h1><p>Payment cancelled. Reply to any of our texts to try again.</p></div></body></html>`);
 });
 
 const https = require('https');
