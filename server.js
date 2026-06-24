@@ -26,9 +26,25 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
 
   if (event.type === 'payment_intent.succeeded') {
     const intent = event.data.object;
-    const phone = intent.metadata?.phone;
     const amount = intent.amount / 100;
-    console.log(`[WEBHOOK] Payment $${amount} from ${phone}`);
+
+    // Get phone — try metadata first, then look up by matching pending payment in conversations
+    let phone = intent.metadata?.phone;
+
+    // If phone not in metadata, scan conversations for someone awaiting payment
+    if (!phone) {
+      try {
+        const convsFile = path.join(__dirname, 'data', 'conversations.json');
+        if (fs.existsSync(convsFile)) {
+          const convs = JSON.parse(fs.readFileSync(convsFile, 'utf8'));
+          const paymentSteps = ['await_ticket_payment', 'await_donation_after_ticket', 'await_donation_payment'];
+          const match = Object.values(convs).find(c => paymentSteps.includes(c.step));
+          if (match) phone = match.phone;
+        }
+      } catch (e) { console.error('[WEBHOOK] Conv lookup error:', e.message); }
+    }
+
+    console.log(`[WEBHOOK] Payment $${amount} phone:${phone}`);
 
     if (phone) {
       try {
@@ -36,74 +52,55 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
         const contact = db.getContact(phone);
         const firstName = contact?.name ? contact.name.split(' ')[0] : null;
         const conv = db.getConversation(phone);
+        const eventObj = conv.eventId ? db.getEvent(conv.eventId) : db.getLatestEvent();
 
-        // ── CHANGE 3 & 4 ─────────────────────────────────
-        // Determine what was just paid based on conversation state
+        console.log(`[WEBHOOK] conv.step:${conv.step} eventId:${conv.eventId}`);
+
+        const confirmation = eventObj
+          ? `You're all set! See you at ${eventObj.name} ${eventObj.date} @ ${eventObj.time}. ${s.confirmationNote || ''}`.trim()
+          : `You're all set! 🙏`;
 
         if (conv.step === 'await_ticket_payment') {
-          // Paid event only — send ticket receipt + confirmation
+          // Paid event only — ticket receipt + confirmation
           const receiptText = await getReceiptText(amount, firstName, 'event', s.receiptMessage || null);
-          const eventObj = conv.eventId ? db.getEvent(conv.eventId) : db.getLatestEvent();
-          const confirmation = eventObj
-            ? `You're all set! See you at ${eventObj.name} ${eventObj.date} @ ${eventObj.time}. ${s.confirmationNote || ''}`.trim()
-            : `You're all set! See you soon.`;
-          await twilioClient.messages.create({
-            body: `${receiptText}\n\n${confirmation}`,
-            from: process.env.TWILIO_PHONE_NUMBER, to: phone
-          });
-          // Mark RSVP paid
+          await smsOut(phone, `${receiptText}\n\n${confirmation}`);
           markRsvpPaid(phone, conv.eventId, amount);
           db.clearConversation(phone);
 
         } else if (conv.step === 'await_donation_after_ticket') {
-          // Paid + Donation — ticket just paid, now send receipt + start donation flow
+          // Paid + Donation — send ticket receipt, then donation ask
           const receiptText = await getReceiptText(amount, firstName, 'event', s.receiptMessage || null);
-          await twilioClient.messages.create({
-            body: receiptText,
-            from: process.env.TWILIO_PHONE_NUMBER, to: phone
-          });
-          // Mark ticket paid
+          await smsOut(phone, receiptText);
           markRsvpPaid(phone, conv.eventId, amount);
-          // Now trigger donation flow
-          const eventObj = conv.eventId ? db.getEvent(conv.eventId) : db.getLatestEvent();
+
+          // Send donation menu
           if (eventObj) {
             const donationMenu = buildDonationMenu(eventObj, s);
             const donationAsk = s.donationAsk || 'Would you like to make a donation to support our programs?';
             db.saveConversation(phone, { step: 'await_donation_decision', eventId: conv.eventId });
-            await twilioClient.messages.create({
-              body: `${donationAsk}\n\n${donationMenu}`,
-              from: process.env.TWILIO_PHONE_NUMBER, to: phone
-            });
+            await smsOut(phone, `${donationAsk}\n\n${donationMenu}`);
+          } else {
+            db.clearConversation(phone);
+            await smsOut(phone, confirmation);
           }
 
         } else if (conv.step === 'await_donation_payment') {
-          // Donation paid — send donation receipt + final confirmation
+          // Donation paid — receipt + final confirmation
           const receiptText = await getReceiptText(amount, firstName, 'donation', s.receiptMessage || null);
-          const eventObj = conv.eventId ? db.getEvent(conv.eventId) : db.getLatestEvent();
-          const confirmation = eventObj
-            ? `You're all set! See you at ${eventObj.name} ${eventObj.date} @ ${eventObj.time}. ${s.confirmationNote || ''}`.trim()
-            : `You're all set! See you soon.`;
-          await twilioClient.messages.create({
-            body: `${receiptText}\n\n${confirmation}`,
-            from: process.env.TWILIO_PHONE_NUMBER, to: phone
-          });
-          db.saveRsvp(conv.eventId || db.getLatestEvent()?.id, phone, { donationAmount: amount });
+          await smsOut(phone, `${receiptText}\n\n${confirmation}`);
+          if (conv.eventId) db.saveRsvp(conv.eventId, phone, { donationAmount: amount });
           db.clearConversation(phone);
 
         } else {
-          // Fallback — generic receipt for any other payment
+          // Fallback — generic receipt
           const receiptText = await getReceiptText(amount, firstName, s.receiptType || 'donation', s.receiptMessage || null);
-          await twilioClient.messages.create({
-            body: receiptText,
-            from: process.env.TWILIO_PHONE_NUMBER, to: phone
-          });
+          await smsOut(phone, receiptText);
           markRsvpPaid(phone, conv.eventId, amount);
           db.clearConversation(phone);
         }
 
-        console.log(`[WEBHOOK] SMS sent to ${phone}`);
-      } catch (smsErr) {
-        console.error(`[WEBHOOK] SMS failed:`, smsErr.message);
+      } catch (err) {
+        console.error(`[WEBHOOK] Processing error:`, err.message);
       }
 
       // Admin notification
@@ -114,24 +111,27 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
             body: `💰 Payment $${amount} from ${contact?.name || phone}`,
             from: process.env.TWILIO_PHONE_NUMBER, to: process.env.ADMIN_PHONE
           });
-        } catch (err) { console.error(`[WEBHOOK] Admin notify failed:`, err.message); }
+        } catch (e) { console.error(`[WEBHOOK] Admin notify failed:`, e.message); }
       }
     }
   }
   res.json({ received: true });
 });
 
-// Helper: build donation menu (mirrors sms.js logic)
+// Helper: send SMS
+async function smsOut(to, body) {
+  await twilioClient.messages.create({ body, from: process.env.TWILIO_PHONE_NUMBER, to });
+  console.log(`[SMS OUT] → ${to}: "${body.substring(0,60)}..."`);
+}
+
+// Helper: build donation menu
 function buildDonationMenu(event, s) {
   const amounts = event?.donationAmounts || [5, 10, 18];
   const useFreeform = event?.useFreeform !== false;
   let menu = '';
-  if (amounts.length > 0) {
-    amounts.forEach((amt, i) => {
-      const label = amt === 18 ? `$18 (Chai ✡️)` : `$${amt}`;
-      menu += `${i + 1} — ${label}\n`;
-    });
-  }
+  amounts.forEach((amt, i) => {
+    menu += `${i + 1} — ${amt === 18 ? '$18 (Chai ✡️)' : '$' + amt}\n`;
+  });
   if (useFreeform) menu += `Or reply with any amount (e.g. $36)\n`;
   menu += `N — No thank you`;
   return menu;
