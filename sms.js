@@ -62,37 +62,29 @@ function buildDonationMenu(event, s) {
 }
 
 // ── TICKET QUANTITY PARSER ────────────────────────────────
-// Handles: "Adult 2", "Adults 2", "Adult 2 Child 1", "2 1", "Child 1"
 function parseTicketQuantities(msg, tickets) {
   const m = msg.toLowerCase().trim();
   const selections = [];
 
   for (let i = 0; i < tickets.length; i++) {
     const base = tickets[i].label.toLowerCase().replace(/e?s+$/, '');
-
-    // Find the position of this ticket label in the message
-    const labelRe = new RegExp(`${base}\\w*`, 'i');
+    const labelRe = new RegExp(`${base}s?`, 'i');
     const labelMatch = m.match(labelRe);
     if (!labelMatch) continue;
-
     const labelPos = m.indexOf(labelMatch[0]);
-    // Look for a number within 10 chars before or after the label
-    const before = m.substring(Math.max(0, labelPos - 5), labelPos);
-    const after = m.substring(labelPos + labelMatch[0].length, labelPos + labelMatch[0].length + 10);
-
-    const numAfter = after.match(/^\s*:?\s*(\d+)/);
-    const numBefore = before.match(/(\d+)\s*$/);
-
+    const labelEnd = labelPos + labelMatch[0].length;
+    const afterStr = m.substring(labelEnd, labelEnd + 8);
+    const beforeStr = m.substring(Math.max(0, labelPos - 4), labelPos);
+    const numAfter = afterStr.match(/^\s*:?\s*(\d+)/);
+    const numBefore = beforeStr.match(/(\d+)\s*$/);
     if (numAfter) {
       const qty = parseInt(numAfter[1]);
       if (qty > 0) selections.push({ ticketIndex: i, qty });
     } else if (numBefore) {
       const qty = parseInt(numBefore[1]);
-      // Make sure this number isn't already used by a previous ticket
       const alreadyUsed = selections.some(s => {
         const prevLabel = tickets[s.ticketIndex].label.toLowerCase();
         const prevPos = m.indexOf(prevLabel);
-        const prevNumPos = m.indexOf(String(s.qty));
         const thisNumPos = m.lastIndexOf(String(qty), labelPos);
         return Math.abs(prevPos - thisNumPos) < Math.abs(labelPos - thisNumPos);
       });
@@ -102,7 +94,7 @@ function parseTicketQuantities(msg, tickets) {
 
   if (selections.length > 0) return selections;
 
-  // Fallback: pure number sequence — "2 1" = 2 of first, 1 of second
+  // Fallback: pure number sequence
   const nums = m.match(/\d+/g);
   if (nums && nums.length >= 1) {
     const result = [];
@@ -112,27 +104,19 @@ function parseTicketQuantities(msg, tickets) {
     }
     if (result.length > 0) return result;
   }
-
   return null;
 }
 
 function buildTicketMenu(tickets) {
   const lines = tickets.map((t, i) => `${String.fromCharCode(65 + i)}) ${t.label} — $${t.price}`).join('\n');
-  // Build a clear example using actual ticket labels
-  let example = '';
-  if (tickets.length === 1) {
-    example = `e.g. "${tickets[0].label} 2" or just "2"`;
-  } else if (tickets.length === 2) {
-    example = `e.g. "${tickets[0].label} 2 ${tickets[1].label} 1"\nor just numbers: "2 1"`;
-  } else {
-    example = `e.g. "${tickets.map((t,i)=>`${t.label} ${i===0?2:1}`).join(' ')}"`;
-  }
+  const example = tickets.length >= 2
+    ? `"${tickets[0].label} 2 ${tickets[1].label} 1"\nor just numbers: "2 1"`
+    : `"${tickets[0].label} 2" or just "2"`;
   return `${lines}\n\nHow many of each?\n${example}`;
 }
 
 // ── GET EVENT FOR PHONE ───────────────────────────────────
-// Returns the event most recently blasted to this specific phone number.
-// This ensures if 2 events were sent, replies go to the right one.
+// Returns the event most recently blasted to this specific phone
 function getEventForPhone(phone) {
   const contact = db.getContact(phone);
   if (contact?.lastEventId) {
@@ -155,7 +139,6 @@ async function handleIncoming(from, body) {
     case 'await_headcount':         return handleHeadcount(phone, msg, contact, conv, s);
     case 'await_ticket_quantities': return handleTicketQuantities(phone, msg, contact, conv, s);
     case 'await_donation_decision': return handleDonationDecision(phone, msg, contact, conv, s);
-    case 'await_save_card':         return handleSaveCardConsent(phone, msg, contact, conv, s);
     case 'await_card_confirm':      return handleCardConfirm(phone, msg, contact, conv, s);
     default:                        return handleIdle(phone, msg, contact, conv, s);
   }
@@ -189,25 +172,20 @@ async function handleIdle(phone, msg, contact, conv, s) {
 async function handleHeadcount(phone, msg, contact, conv, s) {
   const count = parseInt(msg.replace(/[^0-9]/g, ''));
   if (isNaN(count) || count < 1 || count > 100) return `Please reply with just a number (e.g. 2).`;
-
   let event = conv.eventId ? db.getEvent(conv.eventId) : null;
   if (!event) event = getEventForPhone(phone);
   const eventId = event?.id || conv.eventId;
-
   db.saveRsvp(eventId, phone, { guestCount: count });
-  console.log(`[HEADCOUNT] count:${count} eventId:${eventId} eventType:${event?.eventType} tickets:${event?.tickets?.length}`);
-
+  console.log(`[HEADCOUNT] count:${count} eventId:${eventId} eventType:${event?.eventType}`);
   return await afterRsvp(phone, contact, event, s, count, { ...conv, eventId });
 }
 
-// ── CENTRAL ROUTING: after RSVP yes (and optional headcount) ──
+// ── CENTRAL ROUTING AFTER RSVP YES ───────────────────────
 async function afterRsvp(phone, contact, event, s, guestCount, conv = {}) {
   if (!event) { db.clearConversation(phone); return `You're all set! See you soon. 🙏`; }
-
   const isPaid = event.eventType === 'paid' || event.eventType === 'paid_donation';
   const hasDonation = event.eventType === 'free_donation' || event.eventType === 'paid_donation' || event.askDonation;
   const tickets = event.tickets || [];
-
   console.log(`[ROUTING] eventType:${event.eventType} isPaid:${isPaid} hasDonation:${hasDonation} tickets:${tickets.length}`);
 
   if (isPaid && tickets.length > 0) {
@@ -216,12 +194,10 @@ async function afterRsvp(phone, contact, event, s, guestCount, conv = {}) {
     return `Great${first ? ', ' + first : ''}! Please choose your tickets:\n\n${buildTicketMenu(tickets)}`;
   }
 
-  if (hasDonation) {
-    return await startDonationFlow(phone, contact, event, s, guestCount);
-  }
+  if (hasDonation) return await startDonationFlow(phone, contact, event, s, guestCount);
 
   db.clearConversation(phone);
-  return confirmationMessage(event, s);
+  return `You're all set! See you at ${event.name} ${event.date} @ ${event.time}. ${s.confirmationNote || ''}`.trim();
 }
 
 // ── TICKET QUANTITIES ─────────────────────────────────────
@@ -233,43 +209,52 @@ async function handleTicketQuantities(phone, msg, contact, conv, s) {
   if (!tickets.length) { db.clearConversation(phone); return confirmationMessage(event, s); }
 
   const selections = parseTicketQuantities(msg, tickets);
-
   if (!selections) {
     return `I didn't catch that. Please reply with quantities, e.g:\n\n${buildTicketMenu(tickets)}`;
   }
 
-  // Build order
+  // Build order summary
   let total = 0;
   const summaryLines = [];
   const ticketDesc = [];
   for (const sel of selections) {
     const ticket = tickets[sel.ticketIndex];
     if (!ticket) continue;
-    const price = parseFloat(ticket.price) || 0; // ensure number not string
+    const price = parseFloat(ticket.price) || 0;
     const lineTotal = price * sel.qty;
     total += lineTotal;
     summaryLines.push(`${sel.qty}x ${ticket.label} @ $${price} = $${lineTotal}`);
     ticketDesc.push(`${sel.qty}x ${ticket.label}`);
   }
   const descStr = ticketDesc.join(', ');
-  console.log(`[TICKETS] selections:${JSON.stringify(selections)} total:${total} desc:${descStr}`);
+  console.log(`[TICKETS] total:${total} desc:${descStr}`);
 
   if (total <= 0) {
     db.clearConversation(phone);
-    return `There was an issue with the ticket pricing. Please call (914) 330-1307 to complete your registration.\n\n${confirmationMessage(event, s)}`;
+    return `There was a pricing issue. Please call (914) 330-1307 to complete your registration.`;
   }
 
   db.saveRsvp(event.id, phone, { ticketType: descStr, ticketPrice: total, paymentStatus: 'pending' });
 
-  const customerId = await getOrCreateCustomer(phone, contact?.name).catch(e => { console.error('[TICKET STRIPE]', e.message); return null; });
-  const savedCard = customerId ? await getSavedCard(customerId).catch(() => null) : null;
+  // Check for saved card
+  let customerId = null;
+  let savedCard = null;
+  try {
+    customerId = await getOrCreateCustomer(phone, contact?.name);
+    savedCard = customerId ? await getSavedCard(customerId) : null;
+  } catch (err) {
+    console.error('[TICKET STRIPE CUSTOMER]', err.message);
+  }
+
   const orderSummary = summaryLines.join('\n') + `\n\nTotal: $${total}`;
+  const isPaidDonation = event.eventType === 'paid_donation';
 
   if (savedCard) {
     const brandCap = savedCard.brand.charAt(0).toUpperCase() + savedCard.brand.slice(1);
     db.saveConversation(phone, {
       ...conv, step: 'await_card_confirm',
       pendingAmount: total, pendingLabel: descStr, isTicket: true,
+      isPaidDonation,
       customerId, savedCard: { paymentMethodId: savedCard.paymentMethodId, brand: savedCard.brand, last4: savedCard.last4 }
     });
     return (
@@ -279,29 +264,32 @@ async function handleTicketQuantities(phone, msg, contact, conv, s) {
     );
   }
 
-  let link;
+  // No saved card — create payment link (always save card for tickets)
   try {
-    link = await createPaymentLink(total, `${event.name} — ${descStr}`, customerId, phone, true);
+    const link = await createPaymentLink(total, `${event.name} — ${descStr}`, customerId, phone, true);
+    db.saveRsvp(event.id, phone, { ticketPaymentLink: link });
+
+    // ── CHANGE 2 & 4 ──────────────────────────────────────
+    // For paid_donation: save state so webhook can trigger donation after payment
+    // "You're all set" is NOT sent here — it will be sent by webhook after payment confirmed
+    if (isPaidDonation) {
+      db.saveConversation(phone, { step: 'await_donation_after_ticket', eventId: event.id });
+    } else {
+      // For paid-only: webhook sends confirmation, so clear conversation now
+      db.saveConversation(phone, { step: 'await_ticket_payment', eventId: event.id });
+    }
+
+    return (
+      `Here's your order:\n${orderSummary}\n\n` +
+      `🎟️ Secure payment link:\n${link}\n\n` +
+      `💳 Your card will be saved for future events.`
+      // Note: NO "You're all set" here — webhook sends it after payment
+    );
   } catch (err) {
     console.error('[TICKET LINK ERROR]', err.message);
     db.clearConversation(phone);
-    return `Here's your order:\n${orderSummary}\n\nTo complete payment, please call (914) 330-1307 or visit chabadrt.org.\n\n${confirmationMessage(event, s)}`;
+    return `Here's your order:\n${orderSummary}\n\nTo complete payment please call (914) 330-1307.\n\n${confirmationMessage(event, s)}`;
   }
-
-  db.saveRsvp(event.id, phone, { ticketPaymentLink: link });
-
-  if (event.eventType === 'paid_donation') {
-    db.saveConversation(phone, { ...conv, step: 'await_donation_decision', eventId: event.id });
-  } else {
-    db.clearConversation(phone);
-  }
-
-  return (
-    `Here's your order:\n${orderSummary}\n\n` +
-    `🎟️ Secure ticket link:\n${link}\n\n` +
-    `💳 Your card will be saved for future events.\n\n` +
-    confirmationMessage(event, s)
-  );
 }
 
 // ── DONATION FLOW ─────────────────────────────────────────
@@ -316,16 +304,17 @@ async function handleDonationDecision(phone, msg, contact, conv, s) {
   if (!event) event = getEventForPhone(phone);
 
   const amount = parseDonation(msg, event);
-  if (amount === 'skip') { db.clearConversation(phone); return confirmationMessage(event, s); }
+  if (amount === 'skip') {
+    db.clearConversation(phone);
+    return confirmationMessage(event, s);
+  }
   if (amount === null) return `I didn't catch that. Please reply with a number or amount:\n\n${buildDonationMenu(event, s)}`;
 
   console.log(`[DONATION] amount:${amount} phone:${phone}`);
 
   try {
     const customerId = await getOrCreateCustomer(phone, contact?.name);
-    console.log(`[DONATION] customerId:${customerId}`);
     const savedCard = customerId ? await getSavedCard(customerId) : null;
-    console.log(`[DONATION] savedCard:${savedCard ? savedCard.last4 : 'none'}`);
 
     if (savedCard) {
       const brandCap = savedCard.brand.charAt(0).toUpperCase() + savedCard.brand.slice(1);
@@ -340,57 +329,44 @@ async function handleDonationDecision(phone, msg, contact, conv, s) {
       );
     }
 
-    db.saveConversation(phone, { ...conv, step: 'await_save_card', pendingAmount: amount, customerId });
-    return `Would you like to save your card for next time?\n\n1 — Yes, save my card\n2 — No, just pay now`;
+    // ── CHANGE 1 ─────────────────────────────────────────
+    // No "save card" question — always save automatically
+    try {
+      const link = await createPaymentLink(amount, event?.name || 'Chabad Event', customerId, phone, true);
+      db.saveRsvp(event?.id || conv.eventId, phone, { donationAmount: amount });
+      // Save state so webhook can send confirmation after payment
+      db.saveConversation(phone, { step: 'await_donation_payment', eventId: event?.id || conv.eventId, pendingAmount: amount });
+      return (
+        `${s.donationThankYou || 'Great! Here\'s your secure payment link:'}\n🔗 ${link}\n\n` +
+        `💳 Your card will be saved for next time!`
+        // Note: NO "You're all set" here — webhook sends it after payment
+      );
+    } catch (err) {
+      console.error('[DONATION LINK ERROR]', err.message);
+      db.clearConversation(phone);
+      return `Thank you! To complete your $${amount} donation please visit chabadrt.org or call (914) 330-1307.\n\n${confirmationMessage(event, s)}`;
+    }
 
   } catch (err) {
-    console.error(`[DONATION ERROR] ${err.message}`);
-    // Stripe failed — send payment link without customer tracking
+    console.error('[DONATION ERROR]', err.message);
     try {
-      const link = await createPaymentLink(amount, event?.name || 'Chabad Event', null, phone, false);
+      const link = await createPaymentLink(amount, event?.name || 'Chabad Event', null, phone, true);
       db.saveRsvp(event?.id || conv.eventId, phone, { donationAmount: amount });
-      db.clearConversation(phone);
-      return `${s.donationThankYou || 'Here\'s your secure payment link:'}\n🔗 ${link}\n\n${confirmationMessage(event, s)}`;
+      db.saveConversation(phone, { step: 'await_donation_payment', eventId: event?.id || conv.eventId, pendingAmount: amount });
+      return `${s.donationThankYou || 'Here\'s your secure payment link:'}\n🔗 ${link}`;
     } catch (linkErr) {
-      console.error(`[DONATION LINK ERROR] ${linkErr.message}`);
       db.clearConversation(phone);
-      return `Thank you! To complete your donation of $${amount}, please visit chabadrivertowns.com/donate or call (914) 330-1307.\n\n${confirmationMessage(event, s)}`;
+      return `Thank you! To complete your $${amount} donation please call (914) 330-1307.\n\n${confirmationMessage(event, s)}`;
     }
   }
 }
 
-async function handleSaveCardConsent(phone, msg, contact, conv, s) {
-  const m = msg.toLowerCase().trim();
-  let event = conv.eventId ? db.getEvent(conv.eventId) : null;
-  if (!event) event = getEventForPhone(phone);
-  const { pendingAmount, customerId } = conv;
-
-  const isYes = ['1','yes','yeah','yep','sure','ok','okay','y'].includes(m);
-  const isNo  = ['2','no','nope','n'].includes(m);
-  if (!isYes && !isNo) return `Please reply:\n1 — Yes, save my card\n2 — No, just pay now`;
-
-  db.saveContact(phone, { cardSaveConsent: isYes });
-  try {
-    const link = await createPaymentLink(pendingAmount, event?.name || 'Chabad Event', customerId, phone, isYes);
-    db.saveRsvp(event?.id || conv.eventId, phone, { donationAmount: pendingAmount });
-    db.clearConversation(phone);
-    return (
-      `${s.donationThankYou || 'Great! Here\'s your secure payment link:'}\n🔗 ${link}\n` +
-      (isYes ? `\n💳 Your card will be saved for next time!\n` : '') +
-      `\n${confirmationMessage(event, s)}`
-    );
-  } catch (err) {
-    console.error('[PAYMENT LINK ERROR]', err.message);
-    db.clearConversation(phone);
-    return `Thank you! To complete your payment of $${pendingAmount}, please visit chabadrivertowns.com/donate or call (914) 330-1307.\n\n${confirmationMessage(event, s)}`;
-  }
-}
-
+// ── CARD ON FILE CONFIRM ──────────────────────────────────
 async function handleCardConfirm(phone, msg, contact, conv, s) {
   const m = msg.toLowerCase().trim();
   let event = conv.eventId ? db.getEvent(conv.eventId) : null;
   if (!event) event = getEventForPhone(phone);
-  const { customerId, savedCard, pendingAmount, isTicket, pendingLabel } = conv;
+  const { customerId, savedCard, pendingAmount, isTicket, pendingLabel, isPaidDonation } = conv;
 
   const isYes = ['1','yes','yeah','yep','sure','ok','y'].includes(m);
   const isNo  = ['2','no','nope','different','new'].includes(m);
@@ -402,29 +378,56 @@ async function handleCardConfirm(phone, msg, contact, conv, s) {
     if (result.success) {
       if (isTicket) {
         db.saveRsvp(event?.id || conv.eventId, phone, { paymentStatus: 'paid', chargedOnFile: true });
-        if (event?.eventType === 'paid_donation') return await startDonationFlow(phone, contact, event, s);
+        // ── CHANGE 3 ─────────────────────────────────────
+        // Send ticket receipt immediately since no webhook for card-on-file
+        const receiptText = await getReceiptText(pendingAmount, getFirstName(contact), 'event', s.receiptMessage || null);
+
+        if (isPaidDonation) {
+          // Proceed to donation after ticket receipt
+          const donationMsg = await startDonationFlow(phone, contact, event, s);
+          return `${receiptText}\n\n${donationMsg}`;
+        } else {
+          db.clearConversation(phone);
+          return `${receiptText}\n\n${confirmationMessage(event, s)}`;
+        }
       } else {
+        // Donation paid via card on file
         db.saveRsvp(event?.id || conv.eventId, phone, { donationAmount: pendingAmount, chargedOnFile: true });
+        db.clearConversation(phone);
+        const receiptText = await getReceiptText(pendingAmount, getFirstName(contact), 'donation', s.receiptMessage || null);
+        return `${receiptText}\n\n${confirmationMessage(event, s)}`;
       }
-      db.clearConversation(phone);
-      const receiptType = isTicket ? 'event' : (s.receiptType || 'donation');
-      const receiptText = await getReceiptText(pendingAmount, getFirstName(contact), receiptType, s.receiptMessage || null);
-      return `${receiptText}\n\n${confirmationMessage(event, s)}`;
     }
 
     if (result.requiresAction) {
-      const link = await createPaymentLink(pendingAmount, description, customerId, phone, true);
-      db.clearConversation(phone);
-      return `Your saved card needs re-verification:\n🔗 ${link}\n\n${confirmationMessage(event, s)}`;
+      try {
+        const link = await createPaymentLink(pendingAmount, description, customerId, phone, true);
+        db.clearConversation(phone);
+        return `Your saved card needs re-verification:\n🔗 ${link}`;
+      } catch (err) {
+        db.clearConversation(phone);
+        return `There was an issue with your card. Please call (914) 330-1307.`;
+      }
     }
 
     db.clearConversation(phone);
-    return `There was an issue processing your card. Please call (914) 330-1307.\n\n${confirmationMessage(event, s)}`;
+    return `There was an issue processing your card. Please call (914) 330-1307.`;
   }
 
   if (isNo) {
-    db.saveConversation(phone, { ...conv, step: 'await_save_card' });
-    return `No problem! Would you like to save your new card for next time?\n\n1 — Yes, save it\n2 — No thanks`;
+    // Use a different card — create new payment link (no "save card" question)
+    try {
+      const link = await createPaymentLink(pendingAmount, isTicket ? `${event?.name} — ${pendingLabel}` : event?.name, customerId, phone, true);
+      if (isTicket) {
+        db.saveConversation(phone, { ...conv, step: isPaidDonation ? 'await_donation_after_ticket' : 'await_ticket_payment' });
+      } else {
+        db.saveConversation(phone, { ...conv, step: 'await_donation_payment' });
+      }
+      return `Here's your secure payment link:\n🔗 ${link}\n\n💳 Your card will be saved for next time!`;
+    } catch (err) {
+      db.clearConversation(phone);
+      return `To complete payment please call (914) 330-1307.`;
+    }
   }
 
   return `Please reply:\n1 — Yes, charge my saved card\n2 — Use a different card`;
