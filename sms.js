@@ -140,6 +140,11 @@ async function handleIncoming(from, body) {
     case 'await_ticket_quantities': return handleTicketQuantities(phone, msg, contact, conv, s);
     case 'await_donation_decision': return handleDonationDecision(phone, msg, contact, conv, s);
     case 'await_card_confirm':      return handleCardConfirm(phone, msg, contact, conv, s);
+    // These states are waiting for Stripe webhook — don't process inbound SMS
+    case 'await_ticket_payment':
+    case 'await_donation_after_ticket':
+    case 'await_donation_payment':
+      return `We're waiting for your payment to be confirmed. If you've already paid, you'll receive a confirmation shortly. Need help? Call (914) 330-1307.`;
     default:                        return handleIdle(phone, msg, contact, conv, s);
   }
 }
