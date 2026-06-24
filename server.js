@@ -24,14 +24,19 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  if (event.type === 'payment_intent.succeeded') {
-    const intent = event.data.object;
-    const amount = intent.amount / 100;
+  // Handle both Payment Link (checkout.session.completed) 
+  // and card-on-file charges (payment_intent.succeeded)
+  const isCheckout = event.type === 'checkout.session.completed';
+  const isPaymentIntent = event.type === 'payment_intent.succeeded';
 
-    // Get phone — try metadata first, then look up by matching pending payment in conversations
-    let phone = intent.metadata?.phone;
+  if (isCheckout || isPaymentIntent) {
+    const obj = event.data.object;
+    const amount = isCheckout ? obj.amount_total / 100 : obj.amount / 100;
 
-    // If phone not in metadata, scan conversations for someone awaiting payment
+    // Phone from metadata
+    let phone = obj.metadata?.phone;
+
+    // Fallback — scan conversations
     if (!phone) {
       try {
         const convsFile = path.join(__dirname, 'data', 'conversations.json');
@@ -44,7 +49,7 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
       } catch (e) { console.error('[WEBHOOK] Conv lookup error:', e.message); }
     }
 
-    console.log(`[WEBHOOK] Payment $${amount} phone:${phone}`);
+    console.log(`[WEBHOOK] ${event.type} $${amount} phone:${phone}`);
 
     if (phone) {
       try {
