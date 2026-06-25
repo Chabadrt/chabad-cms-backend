@@ -24,26 +24,30 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Handle both Payment Link (checkout.session.completed) 
-  // and card-on-file charges (payment_intent.succeeded)
-  const isCheckout = event.type === 'checkout.session.completed';
-  const isPaymentIntent = event.type === 'payment_intent.succeeded';
+  // Payment Links fire checkout.session.completed — handle these
+  // Card-on-file direct charges fire payment_intent.succeeded with source='sms-rsvp-card-on-file'
+  // Never process both for the same payment to avoid duplicate messages
 
-  if (isCheckout || isPaymentIntent) {
+  const isCheckout = event.type === 'checkout.session.completed';
+  const isCardOnFile = event.type === 'payment_intent.succeeded' &&
+    event.data.object?.metadata?.source === 'sms-rsvp-card-on-file';
+
+  if (!isCheckout && !isCardOnFile) return res.json({ received: true });
+
+  if (isCheckout || isCardOnFile) {
     const obj = event.data.object;
     const amount = isCheckout ? obj.amount_total / 100 : obj.amount / 100;
 
     // Phone from metadata
     let phone = obj.metadata?.phone;
 
-    // Fallback — scan conversations for someone awaiting payment with matching amount
+    // Fallback — scan conversations for someone awaiting payment
     if (!phone) {
       try {
         const convsFile = path.join(__dirname, 'data', 'conversations.json');
         if (fs.existsSync(convsFile)) {
           const convs = JSON.parse(fs.readFileSync(convsFile, 'utf8'));
           const paymentSteps = ['await_ticket_payment', 'await_donation_after_ticket', 'await_donation_payment'];
-          // Try to match by amount first, then fall back to any awaiting payment
           const match = Object.values(convs).find(c =>
             paymentSteps.includes(c.step) &&
             c.pendingAmount && Math.abs(c.pendingAmount - amount) < 0.01
