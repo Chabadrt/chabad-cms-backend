@@ -36,14 +36,18 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
     // Phone from metadata
     let phone = obj.metadata?.phone;
 
-    // Fallback — scan conversations
+    // Fallback — scan conversations for someone awaiting payment with matching amount
     if (!phone) {
       try {
         const convsFile = path.join(__dirname, 'data', 'conversations.json');
         if (fs.existsSync(convsFile)) {
           const convs = JSON.parse(fs.readFileSync(convsFile, 'utf8'));
           const paymentSteps = ['await_ticket_payment', 'await_donation_after_ticket', 'await_donation_payment'];
-          const match = Object.values(convs).find(c => paymentSteps.includes(c.step));
+          // Try to match by amount first, then fall back to any awaiting payment
+          const match = Object.values(convs).find(c =>
+            paymentSteps.includes(c.step) &&
+            c.pendingAmount && Math.abs(c.pendingAmount - amount) < 0.01
+          ) || Object.values(convs).find(c => paymentSteps.includes(c.step));
           if (match) phone = match.phone;
         }
       } catch (e) { console.error('[WEBHOOK] Conv lookup error:', e.message); }
@@ -230,7 +234,12 @@ app.post('/blast', async (req, res) => {
       const firstName = contact?.name ? contact.name.split(' ')[0] : null;
       const msgBody = `${firstName ? 'Hi ' + firstName + '! ' : 'Hi! '}${baseMsg}${suffix}`;
       await twilioClient.messages.create({ body: msgBody, from: process.env.TWILIO_PHONE_NUMBER, to: phone });
+      // Save which event was sent and clear any previous stuck conversation
+      // Save which event was most recently sent to this contact
+      // Also clear any stuck conversation state from a previous event
       db.saveContact(phone, { lastEventId: eventId, lastBlastAt: new Date().toISOString() });
+      db.clearConversation(phone);
+      db.clearConversation(phone); // Reset so they start fresh for this new event
       sent++;
       await new Promise(r => setTimeout(r, 50));
     } catch (err) { console.error(`[BLAST ERROR] ${phone}:`, err.message); failed++; }
