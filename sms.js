@@ -378,7 +378,7 @@ async function handleCardConfirm(phone, msg, contact, conv, s) {
 
   if (isYes) {
     const description = isTicket ? `${event?.name} — ${pendingLabel}` : (event?.name || 'Chabad Event');
-    const result = await chargeCardOnFile(customerId, savedCard.paymentMethodId, pendingAmount, description);
+    const result = await chargeCardOnFile(customerId, savedCard.paymentMethodId, pendingAmount, description, phone);
 
     if (result.success) {
       if (isTicket) {
