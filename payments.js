@@ -60,7 +60,7 @@ async function getSavedCard(customerId) {
 }
 
 // ── CHARGE SAVED CARD ─────────────────────────────────────
-async function chargeCardOnFile(customerId, paymentMethodId, amountDollars, eventName) {
+async function chargeCardOnFile(customerId, paymentMethodId, amountDollars, eventName, phone = '') {
   try {
     const stripe = getStripe();
     const intent = await stripe.paymentIntents.create({
@@ -71,7 +71,11 @@ async function chargeCardOnFile(customerId, paymentMethodId, amountDollars, even
       confirm: true,
       off_session: true,
       description: `Payment — ${eventName} — Chabad of the Rivertowns`,
-      metadata: { event: eventName, source: 'sms-rsvp-card-on-file' }
+      metadata: {
+        event: eventName,
+        source: 'sms-rsvp-card-on-file',
+        phone: phone // so webhook can identify the sender
+      }
     });
     if (intent.status === 'succeeded') {
       console.log(`[STRIPE] Charged $${amountDollars} | intent: ${intent.id}`);
@@ -108,6 +112,7 @@ async function createPaymentLink(amountDollars, eventName, customerId = null, ph
           custom_message: `Thank you for your payment to Chabad of the Rivertowns! We look forward to seeing you. — Rabbi Benjy & Hinda Silverman`
         }
       },
+      // Phone in top-level metadata so checkout.session.completed webhook can read it
       metadata: {
         phone: phone || '',
         amount: String(amountDollars),
