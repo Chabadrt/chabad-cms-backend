@@ -167,7 +167,11 @@
         <label>Select Lists <span class="hint">(duplicates removed automatically)</span></label>
         <div id="list-checkboxes" style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:4px 0;"></div>
       </div>
-      <div id="contact-count" style="font-size:13px;color:var(--muted);margin-bottom:16px;">Loading...</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <div id="contact-count" style="font-size:13px;color:var(--muted);">Loading...</div>
+        <button class="btn btn-outline btn-sm" id="review-btn" onclick="openExcludeModal()" style="display:none;">👥 Review &amp; Deselect</button>
+        <span id="excluded-count" style="font-size:12px;color:#f87171;display:none;"></span>
+      </div>
     </div>
     <div id="send-mode-individual" style="display:none;">
       <div class="form-group"><input type="text" id="contact-search" placeholder="🔍 Search by name or phone..." oninput="filterSendContacts()"></div>
@@ -359,6 +363,25 @@
   </div>
 </div>
 
+<!-- Exclude Contacts Modal -->
+<div class="modal-overlay" id="exclude-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
+    <div class="modal-title">👥 Review Recipients</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">All contacts are selected by default. Uncheck anyone you want to exclude from this blast.</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input type="text" id="exclude-search" placeholder="🔍 Search..." oninput="filterExcludeList()" style="font-size:13px;">
+      <button class="btn btn-outline btn-sm" onclick="selectAllExclude()">All</button>
+      <button class="btn btn-outline btn-sm" onclick="deselectAllExclude()">None</button>
+    </div>
+    <div id="exclude-contacts-list" style="max-height:340px;overflow-y:auto;border:1px solid rgba(201,168,76,0.2);border-radius:8px;margin-bottom:16px;"></div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button class="btn btn-gold" onclick="confirmExclusions()">✅ Confirm</button>
+      <button class="btn btn-outline" onclick="document.getElementById('exclude-modal').style.display='none'">Cancel</button>
+      <span id="exclude-selected-count" style="font-size:13px;color:var(--muted);margin-left:auto;"></span>
+    </div>
+  </div>
+</div>
+
 <div class="notif" id="notif"><span id="notif-msg"></span></div>
 
 <script>
@@ -449,7 +472,7 @@ function loadListDropdown(forceDefault = false) {
   if (!container) return;
   container.innerHTML = lists.map(l => `
     <label class="list-check-item">
-      <input type="checkbox" value="${l.id}" class="list-checkbox" onchange="loadContactCount()" style="width:15px;height:15px;accent-color:var(--gold);">
+      <input type="checkbox" value="${l.id}" class="list-checkbox" onchange="excludedPhones=new Set();updateContactCountDisplay();loadContactCount()" style="width:15px;height:15px;accent-color:var(--gold);">
       ${l.name}
       <span id="lcount-${l.id}" style="font-size:11px;color:var(--muted);margin-left:auto;"></span>
     </label>`).join('');
@@ -681,7 +704,93 @@ async function deleteContactPermanently() {
   } catch (err) { notify('Error: ' + err.message, true); }
 }
 
-// ── BULK MANAGE ───────────────────────────────────────────
+// ── EXCLUDE CONTACTS FROM BLAST ───────────────────────────
+let excludedPhones = new Set(); // phones manually excluded from current blast
+let excludeModalContacts = []; // all contacts currently in selected lists
+
+function openExcludeModal() {
+  const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
+  if (!selected.length) { notify('Please select a list first.', true); return; }
+  const contacts = allContacts.filter(c =>
+    !c.unsubscribed &&
+    (selected.includes('all') || (c.lists||[]).some(l => selected.includes(l)))
+  );
+  // Deduplicate
+  const seen = new Set();
+  excludeModalContacts = contacts.filter(c => { if (seen.has(c.phone)) return false; seen.add(c.phone); return true; });
+  document.getElementById('exclude-search').value = '';
+  renderExcludeList(excludeModalContacts);
+  document.getElementById('exclude-modal').style.display = 'flex';
+}
+
+function renderExcludeList(contacts) {
+  const container = document.getElementById('exclude-contacts-list');
+  if (!contacts.length) { container.innerHTML = '<p style="color:var(--muted);padding:16px;font-size:13px;">No contacts found.</p>'; return; }
+  container.innerHTML = contacts.map(c => `
+    <label class="list-check-item" style="cursor:pointer;">
+      <input type="checkbox" value="${c.phone}" class="exclude-check" ${excludedPhones.has(c.phone)?'':'checked'} onchange="updateExcludeCount()" style="width:15px;height:15px;accent-color:var(--gold);">
+      <div>
+        <div style="font-size:13.5px;font-weight:500;">${c.name||'—'}</div>
+        <div style="font-size:11.5px;color:var(--muted);">${c.phone}</div>
+      </div>
+    </label>`).join('');
+  updateExcludeCount();
+}
+
+function filterExcludeList() {
+  const q = document.getElementById('exclude-search').value.toLowerCase();
+  renderExcludeList(excludeModalContacts.filter(c =>
+    (c.name||'').toLowerCase().includes(q) || c.phone.includes(q)
+  ));
+}
+
+function updateExcludeCount() {
+  const checked = document.querySelectorAll('.exclude-check:checked').length;
+  const total = document.querySelectorAll('.exclude-check').length;
+  document.getElementById('exclude-selected-count').textContent = `${checked} of ${total} will receive blast`;
+}
+
+function selectAllExclude() { document.querySelectorAll('.exclude-check').forEach(c=>c.checked=true); updateExcludeCount(); }
+function deselectAllExclude() { document.querySelectorAll('.exclude-check').forEach(c=>c.checked=false); updateExcludeCount(); }
+
+function confirmExclusions() {
+  // Build new excluded set from unchecked boxes
+  excludedPhones = new Set();
+  document.querySelectorAll('.exclude-check').forEach(chk => {
+    if (!chk.checked) excludedPhones.add(chk.value);
+  });
+  document.getElementById('exclude-modal').style.display = 'none';
+  updateContactCountDisplay();
+}
+
+function updateContactCountDisplay() {
+  const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
+  if (!selected.length) {
+    document.getElementById('contact-count').textContent = 'No list selected';
+    document.getElementById('review-btn').style.display = 'none';
+    document.getElementById('excluded-count').style.display = 'none';
+    return;
+  }
+  const contacts = allContacts.filter(c =>
+    !c.unsubscribed &&
+    (selected.includes('all') || (c.lists||[]).some(l => selected.includes(l)))
+  );
+  const seen = new Set();
+  const unique = contacts.filter(c => { if (seen.has(c.phone)) return false; seen.add(c.phone); return true; });
+  const sending = unique.filter(c => !excludedPhones.has(c.phone));
+
+  document.getElementById('contact-count').textContent =
+    `${sending.length} unique contact${sending.length!==1?'s':''} will receive this message`;
+  document.getElementById('review-btn').style.display = 'inline-flex';
+
+  const excEl = document.getElementById('excluded-count');
+  if (excludedPhones.size > 0) {
+    excEl.textContent = `${excludedPhones.size} excluded`;
+    excEl.style.display = 'inline';
+  } else {
+    excEl.style.display = 'none';
+  }
+}
 function openBulkRemove(listId, listName) {
   bulkRemoveListId = listId;
   document.getElementById('bulk-remove-list-name').textContent = listName;
@@ -828,10 +937,7 @@ async function loadContactCount() {
       const el = document.getElementById('lcount-' + l.id);
       if (el) { const n = l.id==='all'?contacts.length:contacts.filter(c=>c.lists?.includes(l.id)).length; el.textContent = n+' contacts'; }
     });
-    const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
-    const phones = getSelectedPhones(contacts, selected);
-    const el = document.getElementById('contact-count');
-    if (el) el.textContent = `${phones.length} unique contact${phones.length!==1?'s':''} will receive this message`;
+    updateContactCountDisplay();
   } catch {}
 }
 
@@ -909,7 +1015,9 @@ async function sendBlast() {
     const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
     if (!selected.length) { notify('Please select at least one list.', true); return; }
     const contacts = await fetch('/contacts').then(r=>r.json());
-    phones = getSelectedPhones(contacts, selected);
+    const allPhones = getSelectedPhones(contacts, selected);
+    // Filter out manually excluded contacts
+    phones = allPhones.filter(p => !excludedPhones.has(p));
   } else {
     phones = [...document.querySelectorAll('#send-contact-selector input:checked')].map(c => c.value);
   }
@@ -921,6 +1029,8 @@ async function sendBlast() {
     await fetch('/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...currentSettings, receiptType, receiptMessage}) });
     const data = await res.json();
     notify(`✅ Sent to ${data.sent} contact${data.sent!==1?'s':''}!${data.failed>0?` (${data.failed} failed)`:''}`);
+    excludedPhones = new Set();
+    updateContactCountDisplay();;
   } catch(err) { notify('Error: '+err.message, true); }
   finally { btn.disabled=false; btn.innerHTML='📤 Send Blast Now'; }
 }
