@@ -6,74 +6,70 @@
 <title>Chabad Rivertowns — SMS Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root{--gold:#C9A84C;--gold-light:#E8C97A;--navy:#0f1b2d;--navy-mid:#1a2d45;--navy-light:#243a57;--cream:#f9f4ec;--muted:#6b7280;--radius:12px;}
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--cream);min-height:100vh;}
-  .header{background:var(--navy-mid);border-bottom:1px solid rgba(201,168,76,0.2);padding:20px 32px;display:flex;align-items:center;gap:16px;}
-  .header-logo{font-size:28px;}.header-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--gold);}
-  .header-sub{font-size:12px;color:var(--muted);}
-  .tabs{display:flex;background:var(--navy-mid);border-bottom:1px solid rgba(201,168,76,0.15);padding:0 32px;overflow-x:auto;}
-  .tab{padding:14px 18px;font-size:13.5px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all 0.18s;white-space:nowrap;}
-  .tab.active{color:var(--gold);border-bottom-color:var(--gold);}.tab:hover{color:var(--cream);}
-  .content{padding:32px;max-width:860px;margin:0 auto;}
-  .page{display:none;}.page.active{display:block;}
-  .card{background:var(--navy-mid);border:1px solid rgba(201,168,76,0.15);border-radius:var(--radius);padding:24px;margin-bottom:20px;}
-  .card-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--gold-light);margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;}
-  .form-group{margin-bottom:16px;}
-  label{display:block;font-size:11.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;}
-  .hint{font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px;font-weight:400;}
-  input,textarea,select{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--cream);outline:none;transition:border 0.18s;}
-  input:focus,textarea:focus,select:focus{border-color:var(--gold);}
-  input::placeholder,textarea::placeholder{color:rgba(249,244,236,0.25);}
-  select option{background:var(--navy-mid);}textarea{resize:vertical;min-height:70px;}
-  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-  .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
-  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
-  .toggle-row:last-child{border-bottom:none;}
-  .toggle{width:40px;height:22px;background:rgba(255,255,255,0.1);border-radius:11px;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;}
-  .toggle.on{background:var(--gold);}
-  .toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:white;border-radius:50%;transition:transform 0.2s;}
-  .toggle.on::after{transform:translateX(18px);}
-  .btn{padding:10px 20px;border-radius:8px;font-size:13.5px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;border:none;transition:all 0.18s;display:inline-flex;align-items:center;gap:7px;}
-  .btn-gold{background:var(--gold);color:var(--navy);}.btn-gold:hover{background:var(--gold-light);}
-  .btn-outline{background:transparent;color:var(--gold);border:1px solid rgba(201,168,76,0.4);}.btn-outline:hover{background:rgba(201,168,76,0.1);}
-  .btn-danger{background:rgba(192,57,43,0.15);color:#f87171;border:1px solid rgba(192,57,43,0.3);}
-  .btn:disabled{opacity:0.5;cursor:not-allowed;}.btn-sm{padding:6px 13px;font-size:12.5px;}
-  .preview-box{background:rgba(0,0,0,0.2);border:1px solid rgba(201,168,76,0.15);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:rgba(249,244,236,0.85);white-space:pre-wrap;}
-  .notif{position:fixed;bottom:24px;right:24px;background:var(--navy-mid);border:1px solid var(--gold);border-radius:10px;padding:14px 20px;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,0.4);transform:translateY(80px);opacity:0;transition:all 0.3s;z-index:999;max-width:360px;}
-  .notif.show{transform:translateY(0);opacity:1;}.notif.error{border-color:#e74c3c;}
-  table{width:100%;border-collapse:collapse;font-size:13px;}
-  th{text-align:left;padding:9px 11px;font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);border-bottom:1px solid rgba(201,168,76,0.15);}
-  td{padding:10px 11px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
-  tr:hover td{background:rgba(201,168,76,0.04);}
-  .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;}
-  .badge-yes{background:rgba(45,122,79,0.2);color:#4ade80;}.badge-no{background:rgba(192,57,43,0.15);color:#f87171;}
-  .upload-area{border:2px dashed rgba(201,168,76,0.3);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:all 0.2s;}
-  .upload-area:hover{border-color:var(--gold);background:rgba(201,168,76,0.05);}
-  .upload-area .icon{font-size:32px;margin-bottom:8px;}.upload-area p{font-size:13.5px;color:var(--muted);}
-  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
-  .stat{background:var(--navy-mid);border:1px solid rgba(201,168,76,0.15);border-radius:var(--radius);padding:18px;}
-  .stat-num{font-family:'Playfair Display',serif;font-size:30px;color:var(--gold);}.stat-label{font-size:12px;color:var(--muted);margin-top:3px;}
-  .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg);}}
-  .saved-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(45,122,79,0.2);color:#4ade80;padding:3px 10px;border-radius:20px;font-size:12px;opacity:0;transition:opacity 0.3s;}
-  .saved-badge.show{opacity:1;}
-  .send-mode-tabs{display:flex;gap:4px;background:rgba(255,255,255,0.04);border-radius:8px;padding:3px;margin-bottom:16px;}
-  .send-mode-tab{flex:1;text-align:center;padding:8px;border-radius:6px;font-size:13px;cursor:pointer;color:rgba(249,244,236,0.5);transition:all 0.15s;}
-  .send-mode-tab.active{background:var(--navy-light);color:var(--cream);font-weight:500;}
-  .contact-selector{max-height:280px;overflow-y:auto;border:1px solid rgba(201,168,76,0.2);border-radius:8px;background:rgba(255,255,255,0.03);}
-  .contact-item{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.15s;}
-  .contact-item:hover{background:rgba(201,168,76,0.06);}
-  .contact-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--gold);}
-  .contact-name{font-size:13.5px;font-weight:500;}.contact-meta{font-size:11.5px;color:var(--muted);}
-  .list-check-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:var(--cream);}
-  .list-check-item:last-child{border-bottom:none;}
-  .list-check-item input{width:15px;height:15px;cursor:pointer;accent-color:var(--gold);}
-  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
-  .modal{background:var(--navy-mid);border:1px solid rgba(201,168,76,0.2);border-radius:14px;padding:28px;width:100%;max-width:460px;max-height:85vh;overflow-y:auto;}
-  .modal-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold-light);margin-bottom:20px;}
-  .list-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
-  .list-item:last-child{border-bottom:none;}.list-item input{flex:1;}
+:root{--gold:#C9A84C;--gold-light:#E8C97A;--navy:#0f1b2d;--navy-mid:#1a2d45;--navy-light:#243a57;--cream:#f9f4ec;--muted:#6b7280;--radius:12px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--cream);min-height:100vh;}
+.header{background:var(--navy-mid);border-bottom:1px solid rgba(201,168,76,0.2);padding:20px 32px;display:flex;align-items:center;gap:16px;}
+.header-logo{font-size:28px;}.header-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--gold);}
+.header-sub{font-size:12px;color:var(--muted);}
+.tabs{display:flex;background:var(--navy-mid);border-bottom:1px solid rgba(201,168,76,0.15);padding:0 32px;overflow-x:auto;}
+.tab{padding:14px 18px;font-size:13.5px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all 0.18s;white-space:nowrap;}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.content{padding:32px;max-width:860px;margin:0 auto;}
+.page{display:none;}.page.active{display:block;}
+.card{background:var(--navy-mid);border:1px solid rgba(201,168,76,0.15);border-radius:var(--radius);padding:24px;margin-bottom:20px;}
+.card-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--gold-light);margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;}
+.form-group{margin-bottom:16px;}
+label{display:block;font-size:11.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;}
+.hint{font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px;font-weight:400;}
+input,textarea,select{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--cream);outline:none;transition:border 0.18s;}
+input:focus,textarea:focus,select:focus{border-color:var(--gold);}
+input::placeholder,textarea::placeholder{color:rgba(249,244,236,0.25);}
+select option{background:var(--navy-mid);}textarea{resize:vertical;min-height:70px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+.toggle{width:40px;height:22px;background:rgba(255,255,255,0.1);border-radius:11px;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;}
+.toggle.on{background:var(--gold);}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:white;border-radius:50%;transition:transform 0.2s;}
+.toggle.on::after{transform:translateX(18px);}
+.btn{padding:10px 20px;border-radius:8px;font-size:13.5px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;border:none;transition:all 0.18s;display:inline-flex;align-items:center;gap:7px;}
+.btn-gold{background:var(--gold);color:var(--navy);}.btn-outline{background:transparent;color:var(--gold);border:1px solid rgba(201,168,76,0.4);}
+.btn-danger{background:rgba(192,57,43,0.15);color:#f87171;border:1px solid rgba(192,57,43,0.3);}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}.btn-sm{padding:6px 13px;font-size:12.5px;}
+.preview-box{background:rgba(0,0,0,0.2);border:1px solid rgba(201,168,76,0.15);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:rgba(249,244,236,0.85);white-space:pre-wrap;}
+.notif{position:fixed;bottom:24px;right:24px;background:var(--navy-mid);border:1px solid var(--gold);border-radius:10px;padding:14px 20px;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,0.4);transform:translateY(80px);opacity:0;transition:all 0.3s;z-index:999;max-width:360px;}
+.notif.show{transform:translateY(0);opacity:1;}.notif.error{border-color:#e74c3c;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:9px 11px;font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);border-bottom:1px solid rgba(201,168,76,0.15);}
+td{padding:10px 11px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;}
+.badge-yes{background:rgba(45,122,79,0.2);color:#4ade80;}.badge-no{background:rgba(192,57,43,0.15);color:#f87171;}
+.upload-area{border:2px dashed rgba(201,168,76,0.3);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:all 0.2s;}
+.upload-area:hover{border-color:var(--gold);background:rgba(201,168,76,0.05);}
+.upload-area .icon{font-size:32px;margin-bottom:8px;}.upload-area p{font-size:13.5px;color:var(--muted);}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+.stat{background:var(--navy-mid);border:1px solid rgba(201,168,76,0.15);border-radius:var(--radius);padding:18px;}
+.stat-num{font-family:'Playfair Display',serif;font-size:30px;color:var(--gold);}.stat-label{font-size:12px;color:var(--muted);margin-top:3px;}
+.spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.saved-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(45,122,79,0.2);color:#4ade80;padding:3px 10px;border-radius:20px;font-size:12px;opacity:0;transition:opacity 0.3s;}
+.saved-badge.show{opacity:1;}
+.send-mode-tabs{display:flex;gap:4px;background:rgba(255,255,255,0.04);border-radius:8px;padding:3px;margin-bottom:16px;}
+.send-mode-tab{flex:1;text-align:center;padding:8px;border-radius:6px;font-size:13px;cursor:pointer;color:rgba(249,244,236,0.5);transition:all 0.15s;}
+.send-mode-tab.active{background:var(--navy-light);color:var(--cream);font-weight:500;}
+.contact-selector{max-height:280px;overflow-y:auto;border:1px solid rgba(201,168,76,0.2);border-radius:8px;background:rgba(255,255,255,0.03);}
+.contact-item{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;}
+.contact-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--gold);}
+.contact-name{font-size:13.5px;font-weight:500;}.contact-meta{font-size:11.5px;color:var(--muted);}
+.list-check-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:var(--cream);}
+.list-check-item:last-child{border-bottom:none;}
+.list-check-item input{width:15px;height:15px;cursor:pointer;accent-color:var(--gold);}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal{background:var(--navy-mid);border:1px solid rgba(201,168,76,0.2);border-radius:14px;padding:28px;width:100%;max-width:460px;max-height:85vh;overflow-y:auto;}
+.modal-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold-light);margin-bottom:20px;}
+.list-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+.list-item:last-child{border-bottom:none;}.list-item input{flex:1;}
 </style>
 </head>
 <body>
@@ -99,7 +95,7 @@
       <div class="form-group"><label>Date</label><input type="text" id="evt-date" placeholder="Friday, June 27" oninput="updatePreview()"></div>
       <div class="form-group"><label>Time</label><input type="text" id="evt-time" placeholder="7:00 PM" oninput="updatePreview()"></div>
     </div>
-    <div class="form-group"><label>Custom Message <span class="hint">(optional)</span></label><textarea id="evt-msg" placeholder="e.g. Sponsored by the Goldstein family!" oninput="updatePreview()"></textarea></div>
+    <div class="form-group"><label>Message <span class="hint">(for announcements, this is the full message)</span></label><textarea id="evt-msg" placeholder="e.g. Join our WhatsApp group: wa.me/..." oninput="updatePreview()"></textarea></div>
     <div class="form-group"><label>Confirmation Note <span class="hint">(appended to confirmation SMS)</span></label><input type="text" id="evt-confirm" placeholder="Looking forward to seeing you! 🙏"></div>
   </div>
 
@@ -122,13 +118,18 @@
         <input type="radio" name="event-type" value="paid_donation" onchange="onEventTypeChange()" style="width:15px;height:15px;accent-color:var(--gold);margin-top:2px;">
         <div><div style="font-size:13.5px;font-weight:500;">💳❤️ Paid + Donation</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Ticket required, then donation ask</div></div>
       </label>
+      <label style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px;cursor:pointer;" id="et-announcement-lbl">
+        <input type="radio" name="event-type" value="announcement" onchange="onEventTypeChange()" style="width:15px;height:15px;accent-color:var(--gold);margin-top:2px;">
+        <div><div style="font-size:13.5px;font-weight:500;">📢 Announcement Only</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">One-way message, no reply needed</div></div>
+      </label>
     </div>
 
-    <div class="toggle-row"><div><div style="font-size:14px;">Ask headcount</div><div style="font-size:12px;color:var(--muted);">How many people joining?</div></div><div class="toggle" id="tog-headcount" onclick="this.classList.toggle('on')"></div></div>
-
-    <div class="form-group" style="margin-top:14px;">
-      <label>Receipt Message <span class="hint" id="receipt-type-label">(sent after payment — leave blank for default)</span></label>
-      <textarea id="evt-receipt-msg" rows="2" placeholder="Use {name} and {amount} as placeholders. Leave blank for default."></textarea>
+    <div id="rsvp-options">
+      <div class="toggle-row"><div><div style="font-size:14px;">Ask headcount</div><div style="font-size:12px;color:var(--muted);">How many people joining?</div></div><div class="toggle" id="tog-headcount" onclick="this.classList.toggle('on')"></div></div>
+      <div class="form-group" style="margin-top:14px;">
+        <label>Receipt Message <span class="hint" id="receipt-type-label">(sent after payment — leave blank for default)</span></label>
+        <textarea id="evt-receipt-msg" rows="2" placeholder="Use {name} and {amount} as placeholders. Leave blank for default."></textarea>
+      </div>
     </div>
 
     <div id="ticket-settings" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);">
@@ -229,25 +230,21 @@
     </div>
     <button class="btn btn-gold" onclick="addIndividualContact()">➕ Add Contact</button>
   </div>
-
   <div class="card">
     <div class="card-title">⬆️ Import from CSV</div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Upload any CSV — you'll match columns before importing.</p>
     <div class="upload-area" onclick="document.getElementById('csv-input').click()" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
-      <div class="icon">📂</div>
-      <p><strong>Click to upload</strong> or drag and drop your CSV</p>
+      <div class="icon">📂</div><p><strong>Click to upload</strong> or drag and drop your CSV</p>
     </div>
     <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleFileSelect(event)">
     <div id="import-result" style="margin-top:14px;"></div>
   </div>
-
   <div class="card">
     <div class="card-title">
       <span>👥 All Contacts</span>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <select id="contacts-filter" onchange="filterContactsTable()" style="padding:6px 10px;font-size:13px;width:auto;">
-          <option value="all">All Contacts</option>
-          <option value="unlisted">Not in any list</option>
+          <option value="all">All Contacts</option><option value="unlisted">Not in any list</option>
         </select>
         <input type="text" id="contacts-search" placeholder="🔍 Search..." oninput="filterContactsTable()" style="width:150px;padding:6px 10px;font-size:13px;">
         <button class="btn btn-outline btn-sm" onclick="loadContacts()">🔄 Refresh</button>
@@ -261,14 +258,13 @@
 <div class="page" id="tab-settings">
   <div class="card">
     <div class="card-title"><span>✏️ Message Settings</span><span class="saved-badge" id="saved-badge">✅ Saved!</span></div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:22px;">Edit any message the bot sends. Changes take effect immediately.</p>
     <div class="form-group"><label>Bot Introduction</label><textarea id="s-botIntro" rows="3"></textarea></div>
     <div class="form-group"><label>RSVP Prompt</label><textarea id="s-rsvpPrompt" rows="3"></textarea></div>
     <div class="form-group"><label>No Reply Message</label><textarea id="s-noReply" rows="2"></textarea></div>
     <div class="form-group"><label>Donation Ask</label><textarea id="s-donationAsk" rows="2"></textarea></div>
     <div class="form-group"><label>Donation Thank You</label><input type="text" id="s-donationThankYou"></div>
     <div class="form-group"><label>Default Confirmation Note</label><input type="text" id="s-confirmationNote"></div>
-    <div class="form-group"><label>Unrecognized Reply Message</label><textarea id="s-unrecognizedReply" rows="3"></textarea></div>
+    <div class="form-group"><label>Unrecognized Reply</label><textarea id="s-unrecognizedReply" rows="2"></textarea></div>
     <button class="btn btn-gold" onclick="saveSettings()">💾 Save All Settings</button>
   </div>
 </div>
@@ -277,22 +273,17 @@
 <div class="page" id="tab-lists">
   <div class="card">
     <div class="card-title">🗂️ Manage Contact Lists</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Add, rename, or remove lists. Contacts are never deleted when removing a list.</p>
     <div id="lists-manager"></div>
     <div style="margin-top:16px;display:flex;gap:10px;">
-      <input type="text" id="new-list-name" placeholder="New list name (e.g. Shabbat Dinner)" style="max-width:280px;">
+      <input type="text" id="new-list-name" placeholder="New list name" style="max-width:280px;">
       <button class="btn btn-gold" onclick="addList()">+ Add List</button>
     </div>
   </div>
-  <div class="card">
-    <div class="card-title">📊 List Summary</div>
-    <div id="list-summary"><p style="color:var(--muted);font-size:14px;">Loading...</p></div>
-  </div>
+  <div class="card"><div class="card-title">📊 List Summary</div><div id="list-summary"><p style="color:var(--muted);font-size:14px;">Loading...</p></div></div>
+</div>
 </div>
 
-</div><!-- end .content -->
-
-<!-- Edit Contact Lists Modal -->
+<!-- MODALS -->
 <div class="modal-overlay" id="edit-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-title">Edit Contact Lists</div>
@@ -305,31 +296,25 @@
   </div>
 </div>
 
-<!-- Delete Contact Modal -->
 <div class="modal-overlay" id="delete-contact-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:420px;">
     <div class="modal-title">🗑️ Delete Contact</div>
     <p id="delete-contact-info" style="font-size:14px;color:var(--cream);margin-bottom:8px;font-weight:500;"></p>
     <div id="delete-contact-lists" style="font-size:13px;color:var(--muted);margin-bottom:20px;"></div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Choose an action:</p>
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <button class="btn btn-outline" onclick="removeFromAllLists()" style="justify-content:space-between;"><span>📋 Remove from all lists only</span><span style="font-size:11px;color:var(--muted);">stays in system</span></button>
-      <button class="btn btn-danger" onclick="deleteContactPermanently()" style="justify-content:space-between;"><span>🗑️ Delete permanently</span><span style="font-size:11px;opacity:0.7;">cannot be undone</span></button>
+      <button class="btn btn-outline" onclick="removeFromAllLists()"><span>📋 Remove from all lists only</span></button>
+      <button class="btn btn-danger" onclick="deleteContactPermanently()"><span>🗑️ Delete permanently</span></button>
       <button class="btn btn-outline" onclick="document.getElementById('delete-contact-modal').style.display='none'">Cancel</button>
     </div>
   </div>
 </div>
 
-<!-- CSV Column Mapping Modal -->
 <div class="modal-overlay" id="csv-mapping-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:660px;width:100%;">
     <div class="modal-title">📂 Map Your CSV Columns</div>
     <p id="csv-total-count" style="font-size:13px;color:var(--muted);margin-bottom:16px;"></p>
-    <p style="font-size:11.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Match your columns:</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;" id="csv-mapping-fields"></div>
-    <p style="font-size:11.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Preview (first 3 rows):</p>
     <div style="overflow-x:auto;border:1px solid rgba(201,168,76,0.15);border-radius:8px;margin-bottom:20px;"><table id="csv-preview-table" style="font-size:12px;min-width:100%;"></table></div>
-    <p style="font-size:11.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Add to list:</p>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
       <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;cursor:pointer;"><input type="radio" name="csv-list-choice" value="existing" checked onchange="toggleCsvListOptions()" style="width:15px;height:15px;accent-color:var(--gold);"> Existing list</label>
       <select id="csv-existing-list" style="margin-left:23px;font-size:13px;max-width:280px;"></select>
@@ -344,7 +329,6 @@
   </div>
 </div>
 
-<!-- Bulk Manage Modal -->
 <div class="modal-overlay" id="bulk-remove-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:560px;">
     <div class="modal-title">Contacts in: <span id="bulk-remove-list-name" style="color:var(--gold);"></span></div>
@@ -363,11 +347,11 @@
   </div>
 </div>
 
-<!-- Exclude Contacts Modal -->
+<!-- EXCLUDE CONTACTS MODAL -->
 <div class="modal-overlay" id="exclude-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
     <div class="modal-title">👥 Review Recipients</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">All contacts are selected by default. Uncheck anyone you want to exclude from this blast.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">All contacts checked by default. Uncheck anyone to exclude from this blast.</p>
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <input type="text" id="exclude-search" placeholder="🔍 Search..." oninput="filterExcludeList()" style="font-size:13px;">
       <button class="btn btn-outline btn-sm" onclick="selectAllExclude()">All</button>
@@ -385,844 +369,177 @@
 <div class="notif" id="notif"><span id="notif-msg"></span></div>
 
 <script>
-let currentSettings = {};
-let allContacts = [];
-let sendMode = 'list';
-let editingPhone = null;
-let deletingPhone = null;
-let bulkRemoveListId = null;
-let bulkRemoveContacts = [];
-let ticketOptions = [{ label: 'General Admission', price: '' }];
-let pendingCsvData = null;
-let csvPreviewData = null;
+let currentSettings={},allContacts=[],sendMode='list',editingPhone=null,deletingPhone=null;
+let bulkRemoveListId=null,bulkRemoveContacts=[];
+let ticketOptions=[{label:'General Admission',price:''}];
+let pendingCsvData=null,csvPreviewData=null;
+let excludedPhones=new Set(),excludeModalContacts=[];
+const CSV_FIELDS=[{key:'firstName',label:'First Name'},{key:'lastName',label:'Last Name'},{key:'fullName',label:'Full Name (single column)'},{key:'phone',label:'📞 Phone ✱ required'},{key:'list',label:'List (from CSV column)'}];
 
-const CSV_FIELDS = [
-  { key: 'firstName', label: 'First Name' },
-  { key: 'lastName',  label: 'Last Name' },
-  { key: 'fullName',  label: 'Full Name (single column)' },
-  { key: 'phone',     label: '📞 Phone ✱ required' },
-  { key: 'list',      label: 'List (from CSV column)' },
-];
-
-// ── TABS ──────────────────────────────────────────────────
-function showTab(name, el) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
+function showTab(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
   el.classList.add('active');
-  if (name === 'rsvps') loadEvents();
-  if (name === 'contacts') { loadContacts(); renderNewContactLists(); }
-  if (name === 'settings') loadSettings();
-  if (name === 'lists') loadListsTab();
-  if (name === 'blast') { loadListDropdown(true); loadContactCount(); }
+  if(name==='rsvps')loadEvents();
+  if(name==='contacts'){loadContacts();renderNewContactLists();}
+  if(name==='settings')loadSettings();
+  if(name==='lists')loadListsTab();
+  if(name==='blast'){loadListDropdown(true);updateContactCountDisplay();}
 }
+function notify(msg,isError=false){const n=document.getElementById('notif');document.getElementById('notif-msg').textContent=msg;n.className='notif show'+(isError?' error':'');setTimeout(()=>n.classList.remove('show'),4000);}
+function getLists(){return currentSettings.lists||[];}
+async function loadSettingsData(){try{const r=await fetch('/settings');currentSettings=await r.json();return currentSettings;}catch{return {};}}
+async function loadSettings(){await loadSettingsData();['botIntro','rsvpPrompt','noReply','donationAsk','donationThankYou','confirmationNote','unrecognizedReply'].forEach(f=>{const el=document.getElementById('s-'+f);if(el)el.value=currentSettings[f]||'';});updatePreview();}
+async function saveSettingsData(partial){const merged={...currentSettings,...partial};const res=await fetch('/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(merged)});const data=await res.json();currentSettings=data.settings||merged;return currentSettings;}
+async function saveSettings(){const settings={botIntro:document.getElementById('s-botIntro').value,rsvpPrompt:document.getElementById('s-rsvpPrompt').value,noReply:document.getElementById('s-noReply').value,donationAsk:document.getElementById('s-donationAsk').value,donationThankYou:document.getElementById('s-donationThankYou').value,confirmationNote:document.getElementById('s-confirmationNote').value,unrecognizedReply:document.getElementById('s-unrecognizedReply').value};try{await saveSettingsData(settings);document.getElementById('saved-badge').classList.add('show');setTimeout(()=>document.getElementById('saved-badge').classList.remove('show'),2500);notify('✅ Settings saved!');}catch{notify('Could not save settings',true);}}
 
-function notify(msg, isError=false) {
-  const n = document.getElementById('notif');
-  document.getElementById('notif-msg').textContent = msg;
-  n.className = 'notif show' + (isError ? ' error' : '');
-  setTimeout(() => n.classList.remove('show'), 4000);
-}
+function loadListDropdown(forceDefault=false){const lists=getLists();const container=document.getElementById('list-checkboxes');if(!container)return;container.innerHTML=lists.map(l=>'<label class="list-check-item"><input type="checkbox" value="'+l.id+'" class="list-checkbox" onchange="excludedPhones=new Set();updateContactCountDisplay();loadContactCount()" style="width:15px;height:15px;accent-color:var(--gold);">'+l.name+'<span id="lcount-'+l.id+'" style="font-size:11px;color:var(--muted);margin-left:auto;"></span></label>').join('');const checkboxes=[...document.querySelectorAll('.list-checkbox')];const testChk=checkboxes.find(c=>c.parentElement.textContent.toLowerCase().includes('test'));if(forceDefault||!checkboxes.some(c=>c.checked)){if(testChk)testChk.checked=true;else if(checkboxes.length)checkboxes[0].checked=true;}loadContactCount();}
+function renderNewContactLists(){const lists=getLists().filter(l=>l.id!=='all');const container=document.getElementById('new-contact-lists');if(!container)return;container.innerHTML=lists.map(l=>'<label class="list-check-item"><input type="checkbox" value="'+l.id+'" class="new-contact-list-check" style="width:15px;height:15px;accent-color:var(--gold);">'+l.name+'</label>').join('');}
+async function loadListsTab(){await loadSettingsData();renderListsManager();renderListSummary();}
+function renderListsManager(){const lists=getLists();const container=document.getElementById('lists-manager');if(!lists.length){container.innerHTML='<p style="color:var(--muted);">No lists yet.</p>';return;}container.innerHTML=lists.map(l=>'<div class="list-item"><input type="text" value="'+l.name+'" onchange="renameList(''+l.id+'',this.value)" style="flex:1;"><span id="lmgr-count-'+l.id+'" style="font-size:12px;color:var(--muted);min-width:60px;text-align:right;"></span>'+(l.id==='all'?'<span style="font-size:12px;color:var(--muted);">default</span>':'<button class="btn btn-outline btn-sm" onclick="openBulkRemove(''+l.id+'',''+l.name+'')" style="font-size:11.5px;">👥 Manage</button><button class="btn btn-danger btn-sm" onclick="removeList(''+l.id+'')" style="font-size:11.5px;">🗑️ Delete</button>')+'</div>').join('');fetch('/contacts').then(r=>r.json()).then(contacts=>{lists.forEach(l=>{const el=document.getElementById('lmgr-count-'+l.id);if(el){const n=l.id==='all'?contacts.length:contacts.filter(c=>c.lists?.includes(l.id)).length;el.textContent=n+' contacts';}});}).catch(()=>{});}
+function renderListSummary(){fetch('/contacts').then(r=>r.json()).then(contacts=>{const lists=getLists();let html='<table><thead><tr><th>List</th><th>Contacts</th></tr></thead><tbody>';lists.forEach(l=>{const n=l.id==='all'?contacts.length:contacts.filter(c=>c.lists?.includes(l.id)).length;html+='<tr><td>'+l.name+'</td><td>'+n+'</td></tr>';});html+='</tbody></table>';document.getElementById('list-summary').innerHTML=html;}).catch(()=>{document.getElementById('list-summary').innerHTML='<p style="color:#f87171;">Could not load.</p>';});}
+async function addList(){const nameInput=document.getElementById('new-list-name');const name=nameInput.value.trim();if(!name){notify('Please enter a list name',true);return;}const id=name.toLowerCase().replace(/[^a-z0-9]/g,'_');const lists=getLists();if(lists.find(l=>l.id===id)){notify('List already exists',true);return;}lists.push({id,name});await saveSettingsData({lists});nameInput.value='';renderListsManager();renderListSummary();loadListDropdown();renderNewContactLists();notify('✅ "'+name+'" list added!');}
+async function renameList(id,newName){const lists=getLists().map(l=>l.id===id?{...l,name:newName}:l);await saveSettingsData({lists});loadListDropdown();}
+async function removeList(id){if(!confirm('Remove this list? Contacts will not be deleted.'))return;const lists=getLists().filter(l=>l.id!==id);await saveSettingsData({lists});renderListsManager();renderListSummary();loadListDropdown();renderNewContactLists();notify('List removed.');}
 
-// ── SETTINGS ──────────────────────────────────────────────
-function getLists() { return currentSettings.lists || []; }
-
-async function loadSettingsData() {
-  try { const r = await fetch('/settings'); currentSettings = await r.json(); return currentSettings; }
-  catch { return {}; }
-}
-
-async function loadSettings() {
-  await loadSettingsData();
-  const fields = ['botIntro','rsvpPrompt','noReply','donationAsk','donationThankYou','confirmationNote','unrecognizedReply'];
-  fields.forEach(f => { const el = document.getElementById('s-'+f); if (el) el.value = currentSettings[f]||''; });
-  updatePreview();
-}
-
-async function saveSettingsData(partial) {
-  const merged = { ...currentSettings, ...partial };
-  const res = await fetch('/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(merged) });
-  const data = await res.json();
-  currentSettings = data.settings || merged;
-  return currentSettings;
-}
-
-async function saveSettings() {
-  const settings = {
-    botIntro: document.getElementById('s-botIntro').value,
-    rsvpPrompt: document.getElementById('s-rsvpPrompt').value,
-    noReply: document.getElementById('s-noReply').value,
-    donationAsk: document.getElementById('s-donationAsk').value,
-    donationThankYou: document.getElementById('s-donationThankYou').value,
-    confirmationNote: document.getElementById('s-confirmationNote').value,
-    unrecognizedReply: document.getElementById('s-unrecognizedReply').value,
-  };
-  try {
-    await saveSettingsData(settings);
-    document.getElementById('saved-badge').classList.add('show');
-    setTimeout(() => document.getElementById('saved-badge').classList.remove('show'), 2500);
-    notify('✅ Settings saved!');
-  } catch { notify('Could not save settings', true); }
-}
-
-// ── LISTS ─────────────────────────────────────────────────
-function loadListDropdown(forceDefault = false) {
-  const lists = getLists();
-  const container = document.getElementById('list-checkboxes');
-  if (!container) return;
-  container.innerHTML = lists.map(l => `
-    <label class="list-check-item">
-      <input type="checkbox" value="${l.id}" class="list-checkbox" onchange="excludedPhones=new Set();updateContactCountDisplay();loadContactCount()" style="width:15px;height:15px;accent-color:var(--gold);">
-      ${l.name}
-      <span id="lcount-${l.id}" style="font-size:11px;color:var(--muted);margin-left:auto;"></span>
-    </label>`).join('');
-  const checkboxes = [...document.querySelectorAll('.list-checkbox')];
-  const testChk = checkboxes.find(c => c.parentElement.textContent.toLowerCase().includes('test'));
-  if (forceDefault || !checkboxes.some(c => c.checked)) {
-    if (testChk) testChk.checked = true;
-    else if (checkboxes.length) checkboxes[0].checked = true;
-  }
-  loadContactCount();
-}
-
-function renderNewContactLists() {
-  const lists = getLists().filter(l => l.id !== 'all');
-  const container = document.getElementById('new-contact-lists');
-  if (!container) return;
-  container.innerHTML = lists.map(l => `
-    <label class="list-check-item">
-      <input type="checkbox" value="${l.id}" class="new-contact-list-check" style="width:15px;height:15px;accent-color:var(--gold);">
-      ${l.name}
-    </label>`).join('');
-}
-
-async function loadListsTab() { await loadSettingsData(); renderListsManager(); renderListSummary(); }
-
-function renderListsManager() {
-  const lists = getLists();
-  const container = document.getElementById('lists-manager');
-  if (!lists.length) { container.innerHTML = '<p style="color:var(--muted);">No lists yet.</p>'; return; }
-  container.innerHTML = lists.map(l => `
-    <div class="list-item">
-      <input type="text" value="${l.name}" onchange="renameList('${l.id}', this.value)" style="flex:1;">
-      <span id="lmgr-count-${l.id}" style="font-size:12px;color:var(--muted);min-width:60px;text-align:right;"></span>
-      ${l.id === 'all'
-        ? '<span style="font-size:12px;color:var(--muted);">default</span>'
-        : `<button class="btn btn-outline btn-sm" onclick="openBulkRemove('${l.id}','${l.name}')" style="font-size:11.5px;">👥 Manage</button>
-           <button class="btn btn-danger btn-sm" onclick="removeList('${l.id}')" style="font-size:11.5px;">🗑️ Delete</button>`
-      }
-    </div>`).join('');
-  fetch('/contacts').then(r=>r.json()).then(contacts => {
-    lists.forEach(l => {
-      const el = document.getElementById('lmgr-count-' + l.id);
-      if (el) { const n = l.id==='all'?contacts.length:contacts.filter(c=>c.lists?.includes(l.id)).length; el.textContent = n+' contacts'; }
-    });
-  }).catch(()=>{});
-}
-
-function renderListSummary() {
-  fetch('/contacts').then(r=>r.json()).then(contacts => {
-    const lists = getLists();
-    let html = '<table><thead><tr><th>List</th><th>Contacts</th></tr></thead><tbody>';
-    lists.forEach(l => {
-      const n = l.id==='all'?contacts.length:contacts.filter(c=>c.lists?.includes(l.id)).length;
-      html += `<tr><td>${l.name}</td><td>${n}</td></tr>`;
-    });
-    html += '</tbody></table>';
-    document.getElementById('list-summary').innerHTML = html;
-  }).catch(() => { document.getElementById('list-summary').innerHTML = '<p style="color:#f87171;">Could not load.</p>'; });
-}
-
-async function addList() {
-  const nameInput = document.getElementById('new-list-name');
-  const name = nameInput.value.trim();
-  if (!name) { notify('Please enter a list name', true); return; }
-  const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-  const lists = getLists();
-  if (lists.find(l => l.id === id)) { notify('A list with that name already exists', true); return; }
-  lists.push({ id, name });
-  await saveSettingsData({ lists });
-  nameInput.value = '';
-  renderListsManager(); renderListSummary(); loadListDropdown(); renderNewContactLists();
-  notify(`✅ "${name}" list added!`);
-}
-
-async function renameList(id, newName) {
-  const lists = getLists().map(l => l.id === id ? { ...l, name: newName } : l);
-  await saveSettingsData({ lists });
-  loadListDropdown();
-}
-
-async function removeList(id) {
-  if (!confirm('Remove this list? Contacts will not be deleted.')) return;
-  const lists = getLists().filter(l => l.id !== id);
-  await saveSettingsData({ lists });
-  renderListsManager(); renderListSummary(); loadListDropdown(); renderNewContactLists();
-  notify('List removed.');
-}
-
-// ── CONTACTS ──────────────────────────────────────────────
-async function loadContacts() {
-  try {
-    const res = await fetch('/contacts');
-    allContacts = await res.json();
-    populateContactsFilter();
-    filterContactsTable();
-  } catch { document.getElementById('contacts-table').innerHTML='<p style="color:#f87171;">Could not load contacts.</p>'; }
-}
-
-function populateContactsFilter() {
-  const sel = document.getElementById('contacts-filter');
-  if (!sel) return;
-  const current = sel.value;
-  sel.innerHTML = '<option value="all">All Contacts</option><option value="unlisted">Not in any list</option>';
-  getLists().filter(l => l.id !== 'all').forEach(l => {
-    const opt = document.createElement('option');
-    opt.value = l.id; opt.textContent = l.name;
-    sel.appendChild(opt);
-  });
-  sel.value = current || 'all';
-}
-
-function renderContactsTable(contacts) {
-  if (!contacts.length) { document.getElementById('contacts-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No contacts found.</p>'; return; }
-  let html = `<p style="font-size:13px;color:var(--muted);margin-bottom:10px;">${contacts.length} contact${contacts.length!==1?'s':''}</p>`;
-  html += '<table><thead><tr><th>Name</th><th>Phone</th><th>Lists</th><th>Status</th><th></th></tr></thead><tbody>';
-  for (const c of contacts) {
-    const lists = (c.lists||[]).filter(l=>l!=='all');
-    const listNames = lists.map(lid => { const l = getLists().find(x=>x.id===lid); return l?l.name:lid; }).join(', ') || '—';
-    const phone = encodeURIComponent(c.phone);
-    const nameSafe = (c.name||'').replace(/'/g,"\\'");
-    const unsubBadge = c.unsubscribed ? '<span style="font-size:11px;color:#f87171;background:rgba(192,57,43,0.15);padding:2px 7px;border-radius:10px;">Unsubscribed</span>' : '';
-    html += `<tr>
-      <td>${c.name||'—'}</td>
-      <td style="font-size:12px;">${c.phone}</td>
-      <td style="font-size:12px;">${listNames}</td>
-      <td>${unsubBadge}</td>
-      <td style="display:flex;gap:6px;">
-        <button class="btn btn-outline btn-sm" onclick="openEditModal('${phone}','${nameSafe}')">Edit Lists</button>
-        <button class="btn btn-danger btn-sm" onclick="openDeleteContactModal('${phone}','${nameSafe}')" title="Delete">🗑️</button>
-      </td>
-    </tr>`;
-  }
-  html += '</tbody></table>';
-  document.getElementById('contacts-table').innerHTML = html;
-}
-
-function filterContactsTable() {
-  const q = (document.getElementById('contacts-search')?.value || '').toLowerCase();
-  const filter = document.getElementById('contacts-filter')?.value || 'all';
-  let filtered = allContacts;
-  if (filter === 'unlisted') filtered = filtered.filter(c => (c.lists||[]).filter(l=>l!=='all').length === 0);
-  else if (filter !== 'all') filtered = filtered.filter(c => (c.lists||[]).includes(filter));
-  if (q) filtered = filtered.filter(c => (c.name||'').toLowerCase().includes(q) || c.phone.includes(q));
-  renderContactsTable(filtered);
-}
-
-async function createAndSelectList() {
-  const input = document.getElementById('new-list-inline');
-  const name = input.value.trim();
-  if (!name) return;
-  const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-  const lists = getLists();
-  if (!lists.find(l => l.id === id)) { lists.push({ id, name }); await saveSettingsData({ lists }); notify(`✅ List "${name}" created!`); }
-  renderNewContactLists();
-  setTimeout(() => { const chk = document.querySelector(`.new-contact-list-check[value="${id}"]`); if (chk) chk.checked = true; }, 50);
-  input.value = '';
-  loadListDropdown();
-}
-
-async function addIndividualContact() {
-  const first = document.getElementById('new-first').value.trim();
-  const last = document.getElementById('new-last').value.trim();
-  const phone = document.getElementById('new-phone').value.trim();
-  if (!first || !phone) { notify('Please enter at least a first name and phone number', true); return; }
-  const inlineList = document.getElementById('new-list-inline').value.trim();
-  if (inlineList) await createAndSelectList();
-  const name = [first, last].filter(Boolean).join(' ');
-  const selected = [...document.querySelectorAll('.new-contact-list-check:checked')].map(c => c.value);
-  const lists = selected.length ? selected : ['all'];
-  try {
-    await fetch('/contacts', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ phone, name, lists }) });
-    ['new-first','new-last','new-phone','new-list-inline'].forEach(id => document.getElementById(id).value = '');
-    document.querySelectorAll('.new-contact-list-check').forEach(c => c.checked = false);
-    notify(`✅ ${name} added!`);
-    loadContacts(); loadContactCount();
-  } catch { notify('Could not add contact', true); }
-}
-
-function openEditModal(encodedPhone, name) {
-  editingPhone = decodeURIComponent(encodedPhone);
-  document.getElementById('edit-modal-name').textContent = name + ' · ' + editingPhone;
-  const contact = allContacts.find(c => c.phone === editingPhone);
-  const currentLists = contact?.lists || [];
-  document.getElementById('edit-modal-lists').innerHTML = getLists().filter(l=>l.id!=='all').map(l => `
-    <label class="list-check-item">
-      <input type="checkbox" value="${l.id}" class="edit-list-check" style="width:15px;height:15px;accent-color:var(--gold);" ${currentLists.includes(l.id)?'checked':''}>
-      ${l.name}
-    </label>`).join('');
-  document.getElementById('edit-modal').style.display = 'flex';
-}
-
-async function saveContactLists() {
-  const selected = [...document.querySelectorAll('.edit-list-check:checked')].map(c => c.value);
-  const lists = selected.length ? selected : ['all'];
-  try {
-    await fetch('/contacts/' + encodeURIComponent(editingPhone), { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ lists }) });
-    document.getElementById('edit-modal').style.display = 'none';
-    notify('✅ Contact lists updated!');
-    loadContacts(); loadContactCount();
-  } catch { notify('Could not update contact', true); }
-}
-
-function openDeleteContactModal(encodedPhone, name) {
-  deletingPhone = decodeURIComponent(encodedPhone);
-  const contact = allContacts.find(c => c.phone === deletingPhone);
-  document.getElementById('delete-contact-info').textContent = `${name || deletingPhone} · ${deletingPhone}`;
-  const lists = (contact?.lists||[]).filter(l=>l!=='all').map(lid=>{const l=getLists().find(x=>x.id===lid);return l?l.name:lid;});
-  document.getElementById('delete-contact-lists').innerHTML = lists.length ? `Currently in: <strong>${lists.join(', ')}</strong>` : 'Not in any specific list.';
-  document.getElementById('delete-contact-modal').style.display = 'flex';
-}
-
-async function removeFromAllLists() {
-  if (!deletingPhone) return;
-  try {
-    await fetch('/contacts/' + encodeURIComponent(deletingPhone), { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ lists: ['all'] }) });
-    document.getElementById('delete-contact-modal').style.display = 'none';
-    notify('✅ Removed from all lists.');
-    loadContacts(); loadContactCount();
-  } catch (err) { notify('Error: ' + err.message, true); }
-}
-
-async function deleteContactPermanently() {
-  if (!deletingPhone) return;
-  if (!confirm(`Permanently delete ${deletingPhone}?\n\nThis cannot be undone.`)) return;
-  try {
-    const res = await fetch('/contacts/' + encodeURIComponent(deletingPhone), { method: 'DELETE' });
-    if (res.ok) { document.getElementById('delete-contact-modal').style.display = 'none'; notify('✅ Contact deleted.'); loadContacts(); loadContactCount(); }
-    else { const err = await res.json(); notify('Error: ' + (err.error||'Failed'), true); }
-  } catch (err) { notify('Error: ' + err.message, true); }
-}
+async function loadContacts(){try{const res=await fetch('/contacts');allContacts=await res.json();populateContactsFilter();filterContactsTable();}catch{document.getElementById('contacts-table').innerHTML='<p style="color:#f87171;">Could not load contacts.</p>';}}
+function populateContactsFilter(){const sel=document.getElementById('contacts-filter');if(!sel)return;const current=sel.value;sel.innerHTML='<option value="all">All Contacts</option><option value="unlisted">Not in any list</option>';getLists().filter(l=>l.id!=='all').forEach(l=>{const opt=document.createElement('option');opt.value=l.id;opt.textContent=l.name;sel.appendChild(opt);});sel.value=current||'all';}
+function renderContactsTable(contacts){if(!contacts.length){document.getElementById('contacts-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No contacts found.</p>';return;}let html='<p style="font-size:13px;color:var(--muted);margin-bottom:10px;">'+contacts.length+' contact'+(contacts.length!==1?'s':'')+'</p>';html+='<table><thead><tr><th>Name</th><th>Phone</th><th>Lists</th><th>Status</th><th></th></tr></thead><tbody>';for(const c of contacts){const lists=(c.lists||[]).filter(l=>l!=='all').map(lid=>{const l=getLists().find(x=>x.id===lid);return l?l.name:lid;}).join(', ')||'—';const phone=encodeURIComponent(c.phone);const nameSafe=(c.name||'').replace(/'/g,"\'");const unsubBadge=c.unsubscribed?'<span style="font-size:11px;color:#f87171;background:rgba(192,57,43,0.15);padding:2px 7px;border-radius:10px;">Unsubscribed</span>':'';html+='<tr><td>'+(c.name||'—')+'</td><td style="font-size:12px;">'+c.phone+'</td><td style="font-size:12px;">'+lists+'</td><td>'+unsubBadge+'</td><td style="display:flex;gap:6px;"><button class="btn btn-outline btn-sm" onclick="openEditModal(''+phone+'',''+nameSafe+'')">Edit Lists</button><button class="btn btn-danger btn-sm" onclick="openDeleteContactModal(''+phone+'',''+nameSafe+'')">🗑️</button></td></tr>';}html+='</tbody></table>';document.getElementById('contacts-table').innerHTML=html;}
+function filterContactsTable(){const q=(document.getElementById('contacts-search')?.value||'').toLowerCase();const filter=document.getElementById('contacts-filter')?.value||'all';let filtered=allContacts;if(filter==='unlisted')filtered=filtered.filter(c=>(c.lists||[]).filter(l=>l!=='all').length===0);else if(filter!=='all')filtered=filtered.filter(c=>(c.lists||[]).includes(filter));if(q)filtered=filtered.filter(c=>(c.name||'').toLowerCase().includes(q)||c.phone.includes(q));renderContactsTable(filtered);}
+async function createAndSelectList(){const input=document.getElementById('new-list-inline');const name=input.value.trim();if(!name)return;const id=name.toLowerCase().replace(/[^a-z0-9]/g,'_');const lists=getLists();if(!lists.find(l=>l.id===id)){lists.push({id,name});await saveSettingsData({lists});notify('✅ List "'+name+'" created!');}renderNewContactLists();setTimeout(()=>{const chk=document.querySelector('.new-contact-list-check[value="'+id+'"]');if(chk)chk.checked=true;},50);input.value='';loadListDropdown();}
+async function addIndividualContact(){const first=document.getElementById('new-first').value.trim();const last=document.getElementById('new-last').value.trim();const phone=document.getElementById('new-phone').value.trim();if(!first||!phone){notify('Please enter at least a first name and phone number',true);return;}const inlineList=document.getElementById('new-list-inline').value.trim();if(inlineList)await createAndSelectList();const name=[first,last].filter(Boolean).join(' ');const selected=[...document.querySelectorAll('.new-contact-list-check:checked')].map(c=>c.value);const lists=selected.length?selected:['all'];try{await fetch('/contacts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,name,lists})});['new-first','new-last','new-phone','new-list-inline'].forEach(id=>document.getElementById(id).value='');document.querySelectorAll('.new-contact-list-check').forEach(c=>c.checked=false);notify('✅ '+name+' added!');loadContacts();loadContactCount();}catch{notify('Could not add contact',true);}}
+function openEditModal(encodedPhone,name){editingPhone=decodeURIComponent(encodedPhone);document.getElementById('edit-modal-name').textContent=name+' · '+editingPhone;const contact=allContacts.find(c=>c.phone===editingPhone);const currentLists=contact?.lists||[];document.getElementById('edit-modal-lists').innerHTML=getLists().filter(l=>l.id!=='all').map(l=>'<label class="list-check-item"><input type="checkbox" value="'+l.id+'" class="edit-list-check" style="width:15px;height:15px;accent-color:var(--gold);"'+(currentLists.includes(l.id)?' checked':'')+'>'+l.name+'</label>').join('');document.getElementById('edit-modal').style.display='flex';}
+async function saveContactLists(){const selected=[...document.querySelectorAll('.edit-list-check:checked')].map(c=>c.value);const lists=selected.length?selected:['all'];try{await fetch('/contacts/'+encodeURIComponent(editingPhone),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({lists})});document.getElementById('edit-modal').style.display='none';notify('✅ Contact lists updated!');loadContacts();loadContactCount();}catch{notify('Could not update contact',true);}}
+function openDeleteContactModal(encodedPhone,name){deletingPhone=decodeURIComponent(encodedPhone);const contact=allContacts.find(c=>c.phone===deletingPhone);document.getElementById('delete-contact-info').textContent=(name||deletingPhone)+' · '+deletingPhone;const lists=(contact?.lists||[]).filter(l=>l!=='all').map(lid=>{const l=getLists().find(x=>x.id===lid);return l?l.name:lid;});document.getElementById('delete-contact-lists').innerHTML=lists.length?'Currently in: <strong>'+lists.join(', ')+'</strong>':'Not in any specific list.';document.getElementById('delete-contact-modal').style.display='flex';}
+async function removeFromAllLists(){if(!deletingPhone)return;try{await fetch('/contacts/'+encodeURIComponent(deletingPhone),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({lists:['all']})});document.getElementById('delete-contact-modal').style.display='none';notify('✅ Removed from all lists.');loadContacts();loadContactCount();}catch(err){notify('Error: '+err.message,true);}}
+async function deleteContactPermanently(){if(!deletingPhone)return;if(!confirm('Permanently delete '+deletingPhone+'?'))return;try{const res=await fetch('/contacts/'+encodeURIComponent(deletingPhone),{method:'DELETE'});if(res.ok){document.getElementById('delete-contact-modal').style.display='none';notify('✅ Contact deleted.');loadContacts();loadContactCount();}else{const err=await res.json();notify('Error: '+(err.error||'Failed'),true);}}catch(err){notify('Error: '+err.message,true);}}
+function openBulkRemove(listId,listName){bulkRemoveListId=listId;document.getElementById('bulk-remove-list-name').textContent=listName;document.getElementById('bulk-remove-search').value='';document.getElementById('bulk-remove-modal').style.display='flex';fetch('/contacts').then(r=>r.json()).then(contacts=>{bulkRemoveContacts=contacts.filter(c=>(c.lists||[]).includes(listId));renderBulkContacts(bulkRemoveContacts);});}
+function renderBulkContacts(contacts){const container=document.getElementById('bulk-remove-contacts');if(!contacts.length){container.innerHTML='<p style="color:var(--muted);padding:16px;font-size:13px;">No contacts in this list.</p>';return;}container.innerHTML=contacts.map(c=>'<label class="list-check-item" style="cursor:pointer;"><input type="checkbox" value="'+c.phone+'" class="bulk-remove-check" onchange="updateBulkCount()" style="width:15px;height:15px;accent-color:var(--gold);"><div><div style="font-size:13.5px;font-weight:500;">'+(c.name||'—')+'</div><div style="font-size:11.5px;color:var(--muted);">'+c.phone+'</div></div></label>').join('');updateBulkCount();}
+function filterBulkContacts(){const q=document.getElementById('bulk-remove-search').value.toLowerCase();renderBulkContacts(bulkRemoveContacts.filter(c=>(c.name||'').toLowerCase().includes(q)||c.phone.includes(q)));}
+function updateBulkCount(){const n=document.querySelectorAll('.bulk-remove-check:checked').length;document.getElementById('bulk-remove-count').textContent=n?n+' selected':'';}
+function selectAllBulk(){document.querySelectorAll('.bulk-remove-check').forEach(c=>c.checked=true);updateBulkCount();}
+function deselectAllBulk(){document.querySelectorAll('.bulk-remove-check').forEach(c=>c.checked=false);updateBulkCount();}
+async function confirmBulkRemove(){const phones=[...document.querySelectorAll('.bulk-remove-check:checked')].map(c=>c.value);if(!phones.length){notify('No contacts selected.',true);return;}if(!confirm('Remove '+phones.length+' contact'+(phones.length!==1?'s':'')+' from this list?'))return;try{const res=await fetch('/contacts/bulk-remove-from-list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phones,listId:bulkRemoveListId})});const data=await res.json();if(data.success){notify('✅ '+data.removed+' contact'+(data.removed!==1?'s':'')+' removed.');document.getElementById('bulk-remove-modal').style.display='none';loadContacts();loadContactCount();renderListsManager();renderListSummary();}else notify('Error: '+(data.error||'Failed'),true);}catch(err){notify('Network error: '+err.message,true);}}
+async function confirmBulkDelete(){const phones=[...document.querySelectorAll('.bulk-remove-check:checked')].map(c=>c.value);if(!phones.length){notify('No contacts selected.',true);return;}if(!confirm('Permanently DELETE '+phones.length+' contact'+(phones.length!==1?'s':'')+'?'))return;try{const res=await fetch('/contacts/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phones})});const data=await res.json();if(data.success){notify('✅ '+data.deleted+' contact'+(data.deleted!==1?'s':'')+' deleted.');document.getElementById('bulk-remove-modal').style.display='none';loadContacts();loadContactCount();renderListsManager();renderListSummary();}else notify('Error: '+(data.error||'Failed'),true);}catch(err){notify('Network error: '+err.message,true);}}
 
 // ── EXCLUDE CONTACTS FROM BLAST ───────────────────────────
-let excludedPhones = new Set(); // phones manually excluded from current blast
-let excludeModalContacts = []; // all contacts currently in selected lists
+function openExcludeModal(){const selected=[...document.querySelectorAll('.list-checkbox:checked')].map(c=>c.value);if(!selected.length){notify('Please select a list first.',true);return;}const contacts=allContacts.filter(c=>!c.unsubscribed&&(selected.includes('all')||(c.lists||[]).some(l=>selected.includes(l))));const seen=new Set();excludeModalContacts=contacts.filter(c=>{if(seen.has(c.phone))return false;seen.add(c.phone);return true;});document.getElementById('exclude-search').value='';renderExcludeList(excludeModalContacts);document.getElementById('exclude-modal').style.display='flex';}
+function renderExcludeList(contacts){const container=document.getElementById('exclude-contacts-list');if(!contacts.length){container.innerHTML='<p style="color:var(--muted);padding:16px;font-size:13px;">No contacts found.</p>';return;}container.innerHTML=contacts.map(c=>'<label class="list-check-item" style="cursor:pointer;"><input type="checkbox" value="'+c.phone+'" class="exclude-check"'+(excludedPhones.has(c.phone)?'':' checked')+' onchange="updateExcludeCount()" style="width:15px;height:15px;accent-color:var(--gold);"><div><div style="font-size:13.5px;font-weight:500;">'+(c.name||'—')+'</div><div style="font-size:11.5px;color:var(--muted);">'+c.phone+'</div></div></label>').join('');updateExcludeCount();}
+function filterExcludeList(){const q=document.getElementById('exclude-search').value.toLowerCase();renderExcludeList(excludeModalContacts.filter(c=>(c.name||'').toLowerCase().includes(q)||c.phone.includes(q)));}
+function updateExcludeCount(){const checked=document.querySelectorAll('.exclude-check:checked').length;const total=document.querySelectorAll('.exclude-check').length;document.getElementById('exclude-selected-count').textContent=checked+' of '+total+' will receive blast';}
+function selectAllExclude(){document.querySelectorAll('.exclude-check').forEach(c=>c.checked=true);updateExcludeCount();}
+function deselectAllExclude(){document.querySelectorAll('.exclude-check').forEach(c=>c.checked=false);updateExcludeCount();}
+function confirmExclusions(){excludedPhones=new Set();document.querySelectorAll('.exclude-check').forEach(chk=>{if(!chk.checked)excludedPhones.add(chk.value);});document.getElementById('exclude-modal').style.display='none';updateContactCountDisplay();}
 
-function openExcludeModal() {
-  const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
-  if (!selected.length) { notify('Please select a list first.', true); return; }
-  const contacts = allContacts.filter(c =>
-    !c.unsubscribed &&
-    (selected.includes('all') || (c.lists||[]).some(l => selected.includes(l)))
-  );
-  // Deduplicate
-  const seen = new Set();
-  excludeModalContacts = contacts.filter(c => { if (seen.has(c.phone)) return false; seen.add(c.phone); return true; });
-  document.getElementById('exclude-search').value = '';
-  renderExcludeList(excludeModalContacts);
-  document.getElementById('exclude-modal').style.display = 'flex';
-}
-
-function renderExcludeList(contacts) {
-  const container = document.getElementById('exclude-contacts-list');
-  if (!contacts.length) { container.innerHTML = '<p style="color:var(--muted);padding:16px;font-size:13px;">No contacts found.</p>'; return; }
-  container.innerHTML = contacts.map(c => `
-    <label class="list-check-item" style="cursor:pointer;">
-      <input type="checkbox" value="${c.phone}" class="exclude-check" ${excludedPhones.has(c.phone)?'':'checked'} onchange="updateExcludeCount()" style="width:15px;height:15px;accent-color:var(--gold);">
-      <div>
-        <div style="font-size:13.5px;font-weight:500;">${c.name||'—'}</div>
-        <div style="font-size:11.5px;color:var(--muted);">${c.phone}</div>
-      </div>
-    </label>`).join('');
-  updateExcludeCount();
-}
-
-function filterExcludeList() {
-  const q = document.getElementById('exclude-search').value.toLowerCase();
-  renderExcludeList(excludeModalContacts.filter(c =>
-    (c.name||'').toLowerCase().includes(q) || c.phone.includes(q)
-  ));
-}
-
-function updateExcludeCount() {
-  const checked = document.querySelectorAll('.exclude-check:checked').length;
-  const total = document.querySelectorAll('.exclude-check').length;
-  document.getElementById('exclude-selected-count').textContent = `${checked} of ${total} will receive blast`;
-}
-
-function selectAllExclude() { document.querySelectorAll('.exclude-check').forEach(c=>c.checked=true); updateExcludeCount(); }
-function deselectAllExclude() { document.querySelectorAll('.exclude-check').forEach(c=>c.checked=false); updateExcludeCount(); }
-
-function confirmExclusions() {
-  // Build new excluded set from unchecked boxes
-  excludedPhones = new Set();
-  document.querySelectorAll('.exclude-check').forEach(chk => {
-    if (!chk.checked) excludedPhones.add(chk.value);
-  });
-  document.getElementById('exclude-modal').style.display = 'none';
-  updateContactCountDisplay();
-}
-
-function updateContactCountDisplay() {
-  const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
-  if (!selected.length) {
-    document.getElementById('contact-count').textContent = 'No list selected';
-    document.getElementById('review-btn').style.display = 'none';
-    document.getElementById('excluded-count').style.display = 'none';
-    return;
-  }
-  const contacts = allContacts.filter(c =>
-    !c.unsubscribed &&
-    (selected.includes('all') || (c.lists||[]).some(l => selected.includes(l)))
-  );
-  const seen = new Set();
-  const unique = contacts.filter(c => { if (seen.has(c.phone)) return false; seen.add(c.phone); return true; });
-  const sending = unique.filter(c => !excludedPhones.has(c.phone));
-
-  document.getElementById('contact-count').textContent =
-    `${sending.length} unique contact${sending.length!==1?'s':''} will receive this message`;
-  document.getElementById('review-btn').style.display = 'inline-flex';
-
-  const excEl = document.getElementById('excluded-count');
-  if (excludedPhones.size > 0) {
-    excEl.textContent = `${excludedPhones.size} excluded`;
-    excEl.style.display = 'inline';
-  } else {
-    excEl.style.display = 'none';
-  }
-}
-function openBulkRemove(listId, listName) {
-  bulkRemoveListId = listId;
-  document.getElementById('bulk-remove-list-name').textContent = listName;
-  document.getElementById('bulk-remove-search').value = '';
-  document.getElementById('bulk-remove-modal').style.display = 'flex';
-  fetch('/contacts').then(r=>r.json()).then(contacts => {
-    bulkRemoveContacts = contacts.filter(c => (c.lists||[]).includes(listId));
-    renderBulkContacts(bulkRemoveContacts);
-  });
-}
-
-function renderBulkContacts(contacts) {
-  const container = document.getElementById('bulk-remove-contacts');
-  if (!contacts.length) { container.innerHTML = '<p style="color:var(--muted);padding:16px;font-size:13px;">No contacts in this list.</p>'; return; }
-  container.innerHTML = contacts.map(c => `
-    <label class="list-check-item" style="cursor:pointer;">
-      <input type="checkbox" value="${c.phone}" class="bulk-remove-check" onchange="updateBulkCount()" style="width:15px;height:15px;accent-color:var(--gold);">
-      <div><div style="font-size:13.5px;font-weight:500;">${c.name||'—'}</div><div style="font-size:11.5px;color:var(--muted);">${c.phone}</div></div>
-    </label>`).join('');
-  updateBulkCount();
-}
-
-function filterBulkContacts() {
-  const q = document.getElementById('bulk-remove-search').value.toLowerCase();
-  renderBulkContacts(bulkRemoveContacts.filter(c => (c.name||'').toLowerCase().includes(q) || c.phone.includes(q)));
-}
-
-function updateBulkCount() { const n = document.querySelectorAll('.bulk-remove-check:checked').length; document.getElementById('bulk-remove-count').textContent = n ? `${n} selected` : ''; }
-function selectAllBulk() { document.querySelectorAll('.bulk-remove-check').forEach(c=>c.checked=true); updateBulkCount(); }
-function deselectAllBulk() { document.querySelectorAll('.bulk-remove-check').forEach(c=>c.checked=false); updateBulkCount(); }
-
-async function confirmBulkRemove() {
-  const phones = [...document.querySelectorAll('.bulk-remove-check:checked')].map(c => c.value);
-  if (!phones.length) { notify('No contacts selected.', true); return; }
-  if (!confirm(`Remove ${phones.length} contact${phones.length!==1?'s':''} from this list?\n\nContacts will NOT be deleted.`)) return;
-  try {
-    const res = await fetch('/contacts/bulk-remove-from-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ phones, listId: bulkRemoveListId }) });
-    const data = await res.json();
-    if (data.success) { notify(`✅ ${data.removed} contact${data.removed!==1?'s':''} removed.`); document.getElementById('bulk-remove-modal').style.display='none'; loadContacts(); loadContactCount(); renderListsManager(); renderListSummary(); }
-    else notify('Error: ' + (data.error||'Failed'), true);
-  } catch (err) { notify('Network error: ' + err.message, true); }
-}
-
-async function confirmBulkDelete() {
-  const phones = [...document.querySelectorAll('.bulk-remove-check:checked')].map(c => c.value);
-  if (!phones.length) { notify('No contacts selected.', true); return; }
-  if (!confirm(`Permanently DELETE ${phones.length} contact${phones.length!==1?'s':''}?\n\nThis cannot be undone.`)) return;
-  try {
-    const res = await fetch('/contacts/bulk-delete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ phones }) });
-    const data = await res.json();
-    if (data.success) { notify(`✅ ${data.deleted} contact${data.deleted!==1?'s':''} deleted.`); document.getElementById('bulk-remove-modal').style.display='none'; loadContacts(); loadContactCount(); renderListsManager(); renderListSummary(); }
-    else notify('Error: ' + (data.error||'Failed'), true);
-  } catch (err) { notify('Network error: ' + err.message, true); }
-}
+// ── CONTACT COUNT ─────────────────────────────────────────
+async function loadContactCount(){try{const res=await fetch('/contacts');const contacts=await res.json();allContacts=contacts;getLists().forEach(l=>{const el=document.getElementById('lcount-'+l.id);if(el){const n=l.id==='all'?contacts.length:contacts.filter(c=>c.lists?.includes(l.id)).length;el.textContent=n+' contacts';}});updateContactCountDisplay();}catch{}}
+function updateContactCountDisplay(){const selected=[...document.querySelectorAll('.list-checkbox:checked')].map(c=>c.value);if(!selected.length){document.getElementById('contact-count').textContent='No list selected';document.getElementById('review-btn').style.display='none';document.getElementById('excluded-count').style.display='none';return;}const contacts=allContacts.filter(c=>!c.unsubscribed&&(selected.includes('all')||(c.lists||[]).some(l=>selected.includes(l))));const seen=new Set();const unique=contacts.filter(c=>{if(seen.has(c.phone))return false;seen.add(c.phone);return true;});const sending=unique.filter(c=>!excludedPhones.has(c.phone));document.getElementById('contact-count').textContent=sending.length+' unique contact'+(sending.length!==1?'s':'')+' will receive this message';document.getElementById('review-btn').style.display='inline-flex';const excEl=document.getElementById('excluded-count');if(excludedPhones.size>0){excEl.textContent=excludedPhones.size+' excluded';excEl.style.display='inline';}else excEl.style.display='none';}
 
 // ── EVENT TYPE ────────────────────────────────────────────
-function onEventTypeChange() {
-  const type = document.querySelector('input[name="event-type"]:checked')?.value || 'free_rsvp';
-  const showTickets = type === 'paid' || type === 'paid_donation';
-  const showDonation = type === 'free_donation' || type === 'paid_donation';
-  document.getElementById('ticket-settings').style.display = showTickets ? 'block' : 'none';
-  document.getElementById('donation-settings').style.display = showDonation ? 'block' : 'none';
-  ['free_rsvp','free_donation','paid','paid_donation'].forEach(t => {
-    const lbl = document.getElementById('et-'+t+'-lbl');
-    if (lbl) { lbl.style.borderColor = t===type?'var(--gold)':'rgba(201,168,76,0.2)'; lbl.style.borderWidth = t===type?'2px':'1px'; }
-  });
-  // Auto-set receipt type label
-  const label = document.getElementById('receipt-type-label');
-  if (label) {
-    if (type === 'paid' || type === 'paid_donation') label.textContent = '(Event payment receipt — sent after ticket payment)';
-    else if (type === 'free_donation') label.textContent = '(Donation receipt — sent after donation)';
-    else label.textContent = '(Not applicable for free RSVP events)';
-  }
-  updatePreview();
-}
-
-function renderTicketOptions() {
-  const container = document.getElementById('ticket-options-list');
-  if (!container) return;
-  container.innerHTML = ticketOptions.map((t, i) => `
-    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
-      <input type="text" value="${t.label}" placeholder="Ticket label (e.g. Adult)" style="flex:2;font-size:13px;" oninput="ticketOptions[${i}].label=this.value">
-      <div style="display:flex;align-items:center;gap:4px;flex:1;">
-        <span style="color:var(--muted);font-size:14px;">$</span>
-        <input type="number" value="${t.price}" placeholder="0" min="0" style="font-size:13px;" oninput="ticketOptions[${i}].price=parseFloat(this.value)||0">
-      </div>
-      ${ticketOptions.length > 1 ? `<button class="btn btn-danger btn-sm" onclick="removeTicketOption(${i})" style="padding:5px 10px;">✕</button>` : ''}
-    </div>`).join('');
-}
-
-function addTicketOption() { ticketOptions.push({ label: '', price: '' }); renderTicketOptions(); }
-function removeTicketOption(i) { ticketOptions.splice(i, 1); renderTicketOptions(); }
-function togglePresetAmounts() { const on = document.getElementById('tog-preset').classList.contains('on'); document.getElementById('preset-amounts-row').style.display = on ? 'block' : 'none'; }
+function onEventTypeChange(){const type=document.querySelector('input[name="event-type"]:checked')?.value||'free_rsvp';const isAnnouncement=type==='announcement';const showTickets=type==='paid'||type==='paid_donation';const showDonation=type==='free_donation'||type==='paid_donation';document.getElementById('ticket-settings').style.display=showTickets?'block':'none';document.getElementById('donation-settings').style.display=showDonation?'block':'none';document.getElementById('rsvp-options').style.display=isAnnouncement?'none':'block';['free_rsvp','free_donation','paid','paid_donation','announcement'].forEach(t=>{const lbl=document.getElementById('et-'+t+'-lbl');if(lbl){lbl.style.borderColor=t===type?'var(--gold)':'rgba(201,168,76,0.2)';lbl.style.borderWidth=t===type?'2px':'1px';}});const label=document.getElementById('receipt-type-label');if(label){if(type==='paid'||type==='paid_donation')label.textContent='(Event payment receipt — sent after ticket payment)';else if(type==='free_donation')label.textContent='(Donation receipt — sent after donation)';else label.textContent='(sent after payment — leave blank for default)';}updatePreview();}
+let ticketOptionsArr=[{label:'General Admission',price:''}];
+function renderTicketOptions(){const container=document.getElementById('ticket-options-list');if(!container)return;container.innerHTML=ticketOptionsArr.map((t,i)=>'<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;"><input type="text" value="'+t.label+'" placeholder="Ticket label" style="flex:2;font-size:13px;" oninput="ticketOptionsArr['+i+'].label=this.value"><div style="display:flex;align-items:center;gap:4px;flex:1;"><span style="color:var(--muted);font-size:14px;">$</span><input type="number" value="'+t.price+'" placeholder="0" min="0" style="font-size:13px;" oninput="ticketOptionsArr['+i+'].price=parseFloat(this.value)||0"></div>'+(ticketOptionsArr.length>1?'<button class="btn btn-danger btn-sm" onclick="removeTicketOption('+i+')" style="padding:5px 10px;">✕</button>':'')+'</div>').join('');}
+function addTicketOption(){ticketOptionsArr.push({label:'',price:''});renderTicketOptions();}
+function removeTicketOption(i){ticketOptionsArr.splice(i,1);renderTicketOptions();}
+function togglePresetAmounts(){const on=document.getElementById('tog-preset').classList.contains('on');document.getElementById('preset-amounts-row').style.display=on?'block':'none';}
 
 // ── SEND MODE ─────────────────────────────────────────────
-function setSendMode(mode, el) {
-  sendMode = mode;
-  document.querySelectorAll('.send-mode-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('send-mode-list').style.display = mode==='list'?'block':'none';
-  document.getElementById('send-mode-individual').style.display = mode==='individual'?'block':'none';
-  if (mode === 'individual') renderSendContactSelector();
-}
+function setSendMode(mode,el){sendMode=mode;document.querySelectorAll('.send-mode-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById('send-mode-list').style.display=mode==='list'?'block':'none';document.getElementById('send-mode-individual').style.display=mode==='individual'?'block':'none';if(mode==='individual')renderSendContactSelector();}
+function renderSendContactSelector(){const container=document.getElementById('send-contact-selector');if(!allContacts.length){fetch('/contacts').then(r=>r.json()).then(c=>{allContacts=c;renderSendContactSelector();});return;}container.innerHTML=allContacts.map(c=>{const lists=(c.lists||[]).filter(l=>l!=='all').map(lid=>{const l=getLists().find(x=>x.id===lid);return l?l.name:lid;}).join(', ');return '<div class="contact-item" onclick="toggleSendContact(''+encodeURIComponent(c.phone)+'')"><input type="checkbox" id="schk-'+encodeURIComponent(c.phone)+'" value="'+c.phone+'"><div><div class="contact-name">'+(c.name||'Unknown')+'</div><div class="contact-meta">'+c.phone+(lists?' · '+lists:'')+'</div></div></div>';}).join('');updateSelectedCount();}
+function toggleSendContact(ep){const chk=document.getElementById('schk-'+ep);if(chk){chk.checked=!chk.checked;updateSelectedCount();}}
+function updateSelectedCount(){document.getElementById('selected-count').textContent=document.querySelectorAll('#send-contact-selector input:checked').length+' selected';}
+function selectAllSend(){document.querySelectorAll('#send-contact-selector input').forEach(c=>c.checked=true);updateSelectedCount();}
+function deselectAllSend(){document.querySelectorAll('#send-contact-selector input').forEach(c=>c.checked=false);updateSelectedCount();}
+function filterSendContacts(){const q=document.getElementById('contact-search').value.toLowerCase();document.querySelectorAll('#send-contact-selector .contact-item').forEach(item=>{item.style.display=item.textContent.toLowerCase().includes(q)?'flex':'none';});}
+function getSelectedPhones(contacts,selectedLists){if(!selectedLists.length)return[];const seen=new Set();const phones=[];for(const c of contacts){if(selectedLists.includes('all')||(c.lists||[]).some(l=>selectedLists.includes(l))){if(!seen.has(c.phone)){seen.add(c.phone);phones.push(c.phone);}}}return phones;}
 
-function renderSendContactSelector() {
-  const container = document.getElementById('send-contact-selector');
-  if (!allContacts.length) { fetch('/contacts').then(r=>r.json()).then(c=>{allContacts=c;renderSendContactSelector();}); return; }
-  container.innerHTML = allContacts.map(c => {
-    const lists = (c.lists||[]).filter(l=>l!=='all').map(lid=>{const l=getLists().find(x=>x.id===lid);return l?l.name:lid;}).join(', ');
-    return `<div class="contact-item" onclick="toggleSendContact('${encodeURIComponent(c.phone)}')">
-      <input type="checkbox" id="schk-${encodeURIComponent(c.phone)}" value="${c.phone}">
-      <div><div class="contact-name">${c.name||'Unknown'}</div><div class="contact-meta">${c.phone}${lists?' · '+lists:''}</div></div>
-    </div>`;
-  }).join('');
-  updateSelectedCount();
-}
+function updatePreview(){const name=document.getElementById('evt-name').value||'[Event Name]';const date=document.getElementById('evt-date').value||'[Date]';const time=document.getElementById('evt-time').value||'[Time]';const msg=document.getElementById('evt-msg').value;const type=document.querySelector('input[name="event-type"]:checked')?.value||'free_rsvp';if(type==='announcement'){document.getElementById('preview').textContent='Hi [First Name]! '+(msg||'[Your message here]');return;}const intro=currentSettings.botIntro||"This is Rabbi Benjy's new texting bot 🤖";const prompt=currentSettings.rsvpPrompt||"Please reply:
+1 — I'll be there 🙏
+2 — Can't make it this time";let preview='Hi [First Name]! '+intro+'
 
-function toggleSendContact(ep) { const chk = document.getElementById('schk-'+ep); if(chk){chk.checked=!chk.checked;updateSelectedCount();} }
-function updateSelectedCount() { document.getElementById('selected-count').textContent = document.querySelectorAll('#send-contact-selector input:checked').length + ' selected'; }
-function selectAllSend() { document.querySelectorAll('#send-contact-selector input').forEach(c=>c.checked=true); updateSelectedCount(); }
-function deselectAllSend() { document.querySelectorAll('#send-contact-selector input').forEach(c=>c.checked=false); updateSelectedCount(); }
-function filterSendContacts() {
-  const q = document.getElementById('contact-search').value.toLowerCase();
-  document.querySelectorAll('#send-contact-selector .contact-item').forEach(item => { item.style.display = item.textContent.toLowerCase().includes(q)?'flex':'none'; });
-}
+Will you be joining us for '+name+' '+date+' @ '+time+'?';if(msg)preview+='
 
-function getSelectedPhones(contacts, selectedLists) {
-  if (!selectedLists.length) return [];
-  const seen = new Set(); const phones = [];
-  for (const c of contacts) {
-    if (selectedLists.includes('all') || (c.lists||[]).some(l=>selectedLists.includes(l))) {
-      if (!seen.has(c.phone)) { seen.add(c.phone); phones.push(c.phone); }
+'+msg;preview+='
+
+'+prompt;document.getElementById('preview').textContent=preview;}
+
+async function sendBlast(){
+  const name=document.getElementById('evt-name').value;const date=document.getElementById('evt-date').value;const time=document.getElementById('evt-time').value;
+  const eventType=document.querySelector('input[name="event-type"]:checked')?.value||'free_rsvp';
+  const isAnnouncement=eventType==='announcement';
+  if(!isAnnouncement&&(!name||!date||!time)){notify('Please fill in event name, date, and time',true);return;}
+  if(isAnnouncement&&!document.getElementById('evt-msg').value.trim()){notify('Please enter your announcement message',true);return;}
+  const customMessage=document.getElementById('evt-msg').value;const confirmationNote=document.getElementById('evt-confirm').value;
+  const askHeadcount=!isAnnouncement&&document.getElementById('tog-headcount').classList.contains('on');
+  const askDonation=eventType==='free_donation'||eventType==='paid_donation';
+  const receiptMessage=document.getElementById('evt-receipt-msg')?.value.trim()||'';
+  const receiptType=(eventType==='paid'||eventType==='paid_donation')?'event':'donation';
+  const usePreset=document.getElementById('tog-preset')?.classList.contains('on');
+  const useFreeform=document.getElementById('tog-freeform')?.classList.contains('on');
+  const donationAmounts=(askDonation&&usePreset)?[parseInt(document.getElementById('amt1').value)||5,parseInt(document.getElementById('amt2').value)||10,parseInt(document.getElementById('amt3').value)||18]:[];
+  const tickets=(eventType==='paid'||eventType==='paid_donation')?ticketOptionsArr.filter(t=>t.label&&t.price>0):[];
+
+  // Recent blast warning
+  if(sendMode==='list'){
+    const selectedListIds=[...document.querySelectorAll('.list-checkbox:checked')].map(c=>c.value);
+    if(selectedListIds.length){
+      try{
+        const[contactsRes,eventsRes]=await Promise.all([fetch('/contacts'),fetch('/events')]);
+        const contacts=await contactsRes.json();const events=await eventsRes.json();
+        const cutoff=Date.now()-48*60*60*1000;
+        const recentlyBlasted=contacts.filter(c=>{const inList=selectedListIds.includes('all')||(c.lists||[]).some(l=>selectedListIds.includes(l));if(!inList||!c.lastBlastAt)return false;return new Date(c.lastBlastAt).getTime()>cutoff;});
+        if(recentlyBlasted.length>0){const lastEvent=events.find(e=>e.id===recentlyBlasted[0]?.lastEventId);const hoursAgo=Math.round((Date.now()-new Date(recentlyBlasted[0].lastBlastAt).getTime())/3600000);const proceed=confirm('⚠️ Recent Blast Warning
+
+'+recentlyBlasted.length+' contact'+(recentlyBlasted.length!==1?'s':'')+' in this list were blasted '+(lastEvent?'"'+lastEvent.name+'"':'another event')+' about '+hoursAgo+' hour'+(hoursAgo!==1?'s':'')+' ago.
+
+If they reply, responses will be linked to THIS new event.
+
+Send anyway?');if(!proceed)return;}
+      }catch(e){}
     }
   }
-  return phones;
-}
 
-async function loadContactCount() {
-  try {
-    const res = await fetch('/contacts');
-    const contacts = await res.json();
-    allContacts = contacts;
-    getLists().forEach(l => {
-      const el = document.getElementById('lcount-' + l.id);
-      if (el) { const n = l.id==='all'?contacts.length:contacts.filter(c=>c.lists?.includes(l.id)).length; el.textContent = n+' contacts'; }
-    });
-    updateContactCountDisplay();
-  } catch {}
-}
-
-function updatePreview() {
-  const name = document.getElementById('evt-name').value || '[Event Name]';
-  const date = document.getElementById('evt-date').value || '[Date]';
-  const time = document.getElementById('evt-time').value || '[Time]';
-  const msg = document.getElementById('evt-msg').value;
-  const intro = currentSettings.botIntro || "This is Rabbi Benjy's new texting bot 🤖";
-  const prompt = currentSettings.rsvpPrompt || "Please reply:\n1 — I'll be there 🙏\n2 — Can't make it this time";
-  let preview = `Hi [First Name]! ${intro}\n\nWill you be joining us for ${name} ${date} @ ${time}?`;
-  if (msg) preview += `\n\n${msg}`;
-  preview += `\n\n${prompt}`;
-  document.getElementById('preview').textContent = preview;
-}
-
-async function sendBlast() {
-  const name = document.getElementById('evt-name').value;
-  const date = document.getElementById('evt-date').value;
-  const time = document.getElementById('evt-time').value;
-  if (!name || !date || !time) { notify('Please fill in event name, date, and time', true); return; }
-
-  // ── RECENT BLAST WARNING ──────────────────────────────
-  if (sendMode === 'list') {
-    const selectedListIds = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
-    if (selectedListIds.length) {
-      try {
-        const [contactsRes, eventsRes] = await Promise.all([fetch('/contacts'), fetch('/events')]);
-        const contacts = await contactsRes.json();
-        const events = await eventsRes.json();
-        // Find contacts in selected lists that were blasted recently (last 48 hours)
-        const cutoff = Date.now() - 48 * 60 * 60 * 1000;
-        const recentlyBlasted = contacts.filter(c => {
-          const inList = selectedListIds.includes('all') || (c.lists||[]).some(l => selectedListIds.includes(l));
-          if (!inList) return false;
-          if (!c.lastBlastAt) return false;
-          return new Date(c.lastBlastAt).getTime() > cutoff;
-        });
-        if (recentlyBlasted.length > 0) {
-          // Find what event was sent
-          const lastEventId = recentlyBlasted[0]?.lastEventId;
-          const lastEvent = events.find(e => e.id === lastEventId);
-          const lastEventName = lastEvent ? `"${lastEvent.name}"` : 'another event';
-          const hoursAgo = Math.round((Date.now() - new Date(recentlyBlasted[0].lastBlastAt).getTime()) / 3600000);
-          const proceed = confirm(
-            `⚠️ Recent Blast Warning\n\n` +
-            `${recentlyBlasted.length} contact${recentlyBlasted.length!==1?'s':''} in this list were already blasted ${lastEventName} about ${hoursAgo} hour${hoursAgo!==1?'s':''} ago.\n\n` +
-            `If they reply, their response will be linked to THIS new event, not the previous one.\n\n` +
-            `Are you sure you want to send a second blast to the same group?`
-          );
-          if (!proceed) return;
-        }
-      } catch (e) { /* non-blocking — if check fails, proceed anyway */ }
-    }
-  }
-  const customMessage = document.getElementById('evt-msg').value;
-  const confirmationNote = document.getElementById('evt-confirm').value;
-  const eventType = document.querySelector('input[name="event-type"]:checked')?.value || 'free_rsvp';
-  const askHeadcount = document.getElementById('tog-headcount').classList.contains('on');
-  const askDonation = eventType === 'free_donation' || eventType === 'paid_donation';
-  const receiptMessage = document.getElementById('evt-receipt-msg')?.value.trim() || '';
-  // Auto receipt type based on event type
-  const receiptType = (eventType === 'paid' || eventType === 'paid_donation') ? 'event' : 'donation';
-  const usePreset = document.getElementById('tog-preset')?.classList.contains('on');
-  const useFreeform = document.getElementById('tog-freeform')?.classList.contains('on');
-  const donationAmounts = (askDonation && usePreset) ? [
-    parseInt(document.getElementById('amt1').value)||5,
-    parseInt(document.getElementById('amt2').value)||10,
-    parseInt(document.getElementById('amt3').value)||18,
-  ] : [];
-  const tickets = (eventType === 'paid' || eventType === 'paid_donation')
-    ? ticketOptions.filter(t => t.label && t.price > 0) : [];
-  let phones = [];
-  if (sendMode === 'list') {
-    const selected = [...document.querySelectorAll('.list-checkbox:checked')].map(c => c.value);
-    if (!selected.length) { notify('Please select at least one list.', true); return; }
-    const contacts = await fetch('/contacts').then(r=>r.json());
-    const allPhones = getSelectedPhones(contacts, selected);
-    // Filter out manually excluded contacts
-    phones = allPhones.filter(p => !excludedPhones.has(p));
-  } else {
-    phones = [...document.querySelectorAll('#send-contact-selector input:checked')].map(c => c.value);
-  }
-  if (!phones.length) { notify('No contacts selected.', true); return; }
-  const btn = document.getElementById('send-btn');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending...';
-  try {
-    const res = await fetch('/blast', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ event:{name,date,time,customMessage,confirmationNote,eventType,askDonation,askHeadcount,donationAmounts,useFreeform,tickets,receiptType,receiptMessage}, phones }) });
-    await fetch('/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...currentSettings, receiptType, receiptMessage}) });
-    const data = await res.json();
-    notify(`✅ Sent to ${data.sent} contact${data.sent!==1?'s':''}!${data.failed>0?` (${data.failed} failed)`:''}`);
-    excludedPhones = new Set();
-    updateContactCountDisplay();;
-  } catch(err) { notify('Error: '+err.message, true); }
-  finally { btn.disabled=false; btn.innerHTML='📤 Send Blast Now'; }
+  let phones=[];
+  if(sendMode==='list'){
+    const selected=[...document.querySelectorAll('.list-checkbox:checked')].map(c=>c.value);
+    if(!selected.length){notify('Please select at least one list.',true);return;}
+    const contacts=await fetch('/contacts').then(r=>r.json());
+    const allPhones=getSelectedPhones(contacts,selected);
+    phones=allPhones.filter(p=>!excludedPhones.has(p));
+  }else{phones=[...document.querySelectorAll('#send-contact-selector input:checked')].map(c=>c.value);}
+  if(!phones.length){notify('No contacts selected.',true);return;}
+  const btn=document.getElementById('send-btn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Sending...';
+  try{
+    const res=await fetch('/blast',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:{name,date,time,customMessage,confirmationNote,eventType,askDonation,askHeadcount,donationAmounts,useFreeform,tickets,receiptType,receiptMessage},phones})});
+    await fetch('/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...currentSettings,receiptType,receiptMessage})});
+    const data=await res.json();
+    notify('✅ Sent to '+data.sent+' contact'+(data.sent!==1?'s':'')+'!'+(data.failed>0?' ('+data.failed+' failed)':''));
+    excludedPhones=new Set();updateContactCountDisplay();
+  }catch(err){notify('Error: '+err.message,true);}
+  finally{btn.disabled=false;btn.innerHTML='📤 Send Blast Now';}
 }
 
 // ── RSVPs ─────────────────────────────────────────────────
-async function loadEvents() {
-  try {
-    const res = await fetch('/events');
-    const events = await res.json();
-    const sel = document.getElementById('event-selector');
-    if (!events.length) { sel.innerHTML='<option value="">No events yet</option>'; document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No events yet. Send a blast first!</p>'; return; }
-    sel.innerHTML = events.map(e => `<option value="${e.id}">${e.name} — ${e.date} @ ${e.time}</option>`).join('');
-    loadRsvpsForEvent(events[0].id);
-  } catch { document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load events.</p>'; }
-}
+async function loadEvents(){try{const res=await fetch('/events');const events=await res.json();const sel=document.getElementById('event-selector');if(!events.length){sel.innerHTML='<option value="">No events yet</option>';document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No events yet.</p>';return;}sel.innerHTML=events.map(e=>'<option value="'+e.id+'">'+e.name+(e.eventType==='announcement'?' 📢':'')+(e.date?' — '+e.date:'')+' @ '+(e.time||'')+'</option>').join('');loadRsvpsForEvent(events[0].id);}catch{document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load events.</p>';}}
+async function loadRsvpsForEvent(eventId){if(!eventId)return;try{const[rsvpRes,eventsRes]=await Promise.all([fetch('/rsvps/'+eventId),fetch('/events')]);const rsvps=await rsvpRes.json();const events=await eventsRes.json();const event=events.find(e=>e.id===eventId);const isPaid=event?.eventType==='paid'||event?.eventType==='paid_donation';const sel=document.getElementById('event-selector');document.getElementById('rsvp-title').textContent='📋 '+(sel.options[sel.selectedIndex]?.text||'Event');if(!rsvps.length){['stat-yes','stat-no','stat-donations'].forEach(id=>document.getElementById(id).textContent=id==='stat-donations'?'$0':'0');document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No RSVPs yet.</p>';return;}document.getElementById('stat-yes').textContent=rsvps.filter(r=>r.status==='yes').length;document.getElementById('stat-no').textContent=rsvps.filter(r=>r.status==='no').length;const total=rsvps.reduce((s,r)=>s+(r.ticketPrice||0)+(r.donationAmount||0),0);document.getElementById('stat-donations').textContent='$'+total;let headers='<tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th>';if(isPaid)headers+='<th>Ticket</th><th>Payment</th>';headers+='<th>Donation</th></tr>';let html='<table><thead>'+headers+'</thead><tbody>';for(const r of rsvps){const badge=r.status==='yes'?'badge-yes':r.status==='no'?'badge-no':'';const label=r.status==='yes'?'✓ Yes':r.status==='no'?'✗ No':'⏳';html+='<tr><td>'+(r.name||'—')+'</td><td style="font-size:12px;">'+r.phone+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td>'+(r.guestCount||'—')+'</td>';if(isPaid){const td=r.ticketType?r.ticketType+' ($'+(r.ticketPrice||0)+')':'—';const pb=r.paymentStatus==='paid'?'<span class="badge badge-yes">✅ Paid</span>':r.paymentStatus==='pending'?'<span class="badge" style="background:rgba(234,179,8,0.15);color:#fbbf24;">⏳ Pending</span>':'—';html+='<td style="font-size:12px;">'+td+'</td><td>'+pb+'</td>';}html+='<td>'+(r.donationAmount?'$'+r.donationAmount:'—')+'</td></tr>';}html+='</tbody></table>';document.getElementById('rsvp-table').innerHTML=html;}catch{document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load RSVPs.</p>';}}
+function exportRsvps(){const sel=document.getElementById('event-selector');if(!sel?.value){notify('Please select an event first.',true);return;}const table=document.querySelector('#rsvp-table table');if(!table){notify('No RSVP data to export.',true);return;}let csv='';table.querySelectorAll('tr').forEach(row=>{csv+=Array.from(row.querySelectorAll('th,td')).map(c=>'"'+c.innerText.replace(/"/g,'""')+'"').join(',')+'
+';});const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(sel.options[sel.selectedIndex]?.text||'rsvps').replace(/[^a-z0-9]/gi,'_')+'_rsvps.csv';a.click();URL.revokeObjectURL(url);notify('✅ RSVPs exported!');}
+async function deleteEvent(){const sel=document.getElementById('event-selector');const eventId=sel?.value;const eventName=sel?.options[sel.selectedIndex]?.text;if(!eventId){notify('Please select an event first.',true);return;}if(!confirm('Delete "'+eventName+'"?
 
-async function loadRsvpsForEvent(eventId) {
-  if (!eventId) return;
-  try {
-    const [rsvpRes, eventsRes] = await Promise.all([fetch('/rsvps/'+eventId), fetch('/events')]);
-    const rsvps = await rsvpRes.json();
-    const events = await eventsRes.json();
-    const event = events.find(e => e.id === eventId);
-    const isPaid = event?.eventType === 'paid' || event?.eventType === 'paid_donation';
-    const sel = document.getElementById('event-selector');
-    document.getElementById('rsvp-title').textContent = '📋 ' + (sel.options[sel.selectedIndex]?.text || 'Event');
-    if (!rsvps.length) {
-      ['stat-yes','stat-no','stat-donations'].forEach(id => document.getElementById(id).textContent = id==='stat-donations'?'$0':'0');
-      document.getElementById('rsvp-table').innerHTML = '<p style="color:var(--muted);padding:16px 0;">No RSVPs yet.</p>';
-      return;
-    }
-    document.getElementById('stat-yes').textContent = rsvps.filter(r=>r.status==='yes').length;
-    document.getElementById('stat-no').textContent = rsvps.filter(r=>r.status==='no').length;
-    const total = rsvps.reduce((s,r)=>s+(r.ticketPrice||0)+(r.donationAmount||0),0);
-    document.getElementById('stat-donations').textContent = `$${total}`;
-    let headers = '<tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th>';
-    if (isPaid) headers += '<th>Ticket</th><th>Payment</th>';
-    headers += '<th>Donation</th></tr>';
-    let html = `<table><thead>${headers}</thead><tbody>`;
-    for (const r of rsvps) {
-      const badge = r.status==='yes'?'badge-yes':r.status==='no'?'badge-no':'';
-      const label = r.status==='yes'?'✓ Yes':r.status==='no'?'✗ No':'⏳';
-      html += `<tr><td>${r.name||'—'}</td><td style="font-size:12px;">${r.phone}</td><td><span class="badge ${badge}">${label}</span></td><td>${r.guestCount||'—'}</td>`;
-      if (isPaid) {
-        const ticketDisplay = r.ticketType ? `${r.ticketType} ($${r.ticketPrice||0})` : '—';
-        const payBadge = r.paymentStatus==='paid'?'<span class="badge badge-yes">✅ Paid</span>':r.paymentStatus==='pending'?'<span class="badge" style="background:rgba(234,179,8,0.15);color:#fbbf24;">⏳ Pending</span>':'—';
-        html += `<td style="font-size:12px;">${ticketDisplay}</td><td>${payBadge}</td>`;
-      }
-      html += `<td>${r.donationAmount?'$'+r.donationAmount:'—'}</td></tr>`;
-    }
-    html += '</tbody></table>';
-    document.getElementById('rsvp-table').innerHTML = html;
-  } catch { document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load RSVPs.</p>'; }
-}
-
-function exportRsvps() {
-  const sel = document.getElementById('event-selector');
-  const eventName = sel?.options[sel.selectedIndex]?.text || 'rsvps';
-  if (!sel?.value) { notify('Please select an event first.', true); return; }
-  const table = document.querySelector('#rsvp-table table');
-  if (!table) { notify('No RSVP data to export.', true); return; }
-  let csv = '';
-  table.querySelectorAll('tr').forEach(row => {
-    csv += Array.from(row.querySelectorAll('th, td')).map(c => `"${c.innerText.replace(/"/g,'""')}"`).join(',') + '\n';
-  });
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = `${eventName.replace(/[^a-z0-9]/gi,'_')}_rsvps.csv`; a.click();
-  URL.revokeObjectURL(url);
-  notify('✅ RSVPs exported!');
-}
-
-async function deleteEvent() {
-  const sel = document.getElementById('event-selector');
-  const eventId = sel?.value, eventName = sel?.options[sel.selectedIndex]?.text;
-  if (!eventId) { notify('Please select an event first.', true); return; }
-  if (!confirm(`Delete "${eventName}"?\n\nThis will permanently remove the event and all RSVPs.`)) return;
-  try {
-    const res = await fetch(`/api/events/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
-    if (res.ok) { notify(`"${eventName}" deleted.`); loadEvents(); }
-    else { const err = await res.json(); notify('Error: '+(err.error||'Failed'), true); }
-  } catch (err) { notify('Network error: '+err.message, true); }
-}
+This will permanently remove the event and all RSVPs.'))return;try{const res=await fetch('/api/events/'+encodeURIComponent(eventId),{method:'DELETE'});if(res.ok){notify('"'+eventName+'" deleted.');loadEvents();}else{const err=await res.json();notify('Error: '+(err.error||'Failed'),true);}}catch(err){notify('Network error: '+err.message,true);}}
 
 // ── CSV MAPPING ───────────────────────────────────────────
-function handleDrop(e) { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) processCSV(f); }
-function handleFileSelect(e) { const f = e.target.files[0]; if (f) processCSV(f); }
-
-async function processCSV(file) {
-  const reader = new FileReader();
-  reader.onload = async (ev) => {
-    pendingCsvData = ev.target.result;
-    document.getElementById('import-result').innerHTML = '<p style="color:var(--gold);">Reading file...</p>';
-    try {
-      const res = await fetch('/contacts/csv-preview', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ csv: pendingCsvData }) });
-      csvPreviewData = await res.json();
-      openCsvMappingModal(csvPreviewData);
-      document.getElementById('import-result').innerHTML = '';
-    } catch (err) { document.getElementById('import-result').innerHTML = `<p style="color:#f87171;">Error: ${err.message}</p>`; }
-  };
-  reader.readAsText(file);
-}
-
-function openCsvMappingModal(preview) {
-  const { headers, rows, total } = preview;
-  document.getElementById('csv-total-count').textContent = `${total} contact${total!==1?'s':''} found in file`;
-  const skipOpt = `<option value="-1">— Skip —</option>`;
-  const headerOpts = headers.map((h, i) => `<option value="${i}">${h}</option>`).join('');
-  function autoDetect(kw) { return headers.findIndex(h => kw.some(k => h.toLowerCase().includes(k))); }
-  const autoMap = {
-    firstName: autoDetect(['first','fname','given']),
-    lastName:  autoDetect(['last','lname','surname','family']),
-    fullName:  autoDetect(['full name','fullname','contact name','name']),
-    phone:     autoDetect(['phone','mobile','cell','tel','number']),
-    list:      autoDetect(['list','group','tag','category']),
-  };
-  if (autoMap.firstName >= 0 || autoMap.lastName >= 0) autoMap.fullName = -1;
-  document.getElementById('csv-mapping-fields').innerHTML = CSV_FIELDS.map(f => `
-    <div>
-      <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;display:block;">${f.label}</label>
-      <select id="map-${f.key}" style="font-size:13px;" onchange="updateCsvPreview()">
-        ${skipOpt}${headerOpts}
-      </select>
-    </div>`).join('');
-  CSV_FIELDS.forEach(f => { const sel = document.getElementById('map-'+f.key); if(sel && autoMap[f.key]>=0) sel.value=autoMap[f.key]; });
-  updateCsvPreview();
-  const listSel = document.getElementById('csv-existing-list');
-  listSel.innerHTML = getLists().filter(l=>l.id!=='all').map(l=>`<option value="${l.id}">${l.name}</option>`).join('');
-  document.querySelector('input[name="csv-list-choice"][value="existing"]').checked = true;
-  toggleCsvListOptions();
-  document.getElementById('csv-mapping-modal').style.display = 'flex';
-}
-
-function updateCsvPreview() {
-  if (!csvPreviewData) return;
-  const { headers, rows } = csvPreviewData;
-  const mapping = {};
-  CSV_FIELDS.forEach(f => { const s = document.getElementById('map-'+f.key); if(s) mapping[f.key]=parseInt(s.value); });
-  const mappedCols = new Set(Object.values(mapping).filter(v=>v>=0));
-  const mapLabels = {};
-  CSV_FIELDS.forEach(f => { if(mapping[f.key]>=0) mapLabels[mapping[f.key]]=f.label.replace('📞 ','').replace(' ✱ required',''); });
-  let html = '<thead><tr>';
-  headers.forEach((h,i) => { const m=mappedCols.has(i); html+=`<th style="padding:7px 10px;font-size:10px;${m?'background:rgba(201,168,76,0.15);color:var(--gold);':'color:var(--muted);'}">${h}${m?`<br><span style="font-size:9px;opacity:0.7;">→ ${mapLabels[i]}</span>`:''}</th>`; });
-  html += '</tr></thead><tbody>';
-  rows.forEach(row => { html+='<tr>'; row.forEach((v,i)=>{ html+=`<td style="padding:6px 10px;${mappedCols.has(i)?'color:var(--cream);':'color:var(--muted);opacity:0.5;'}">${v||'—'}</td>`; }); html+='</tr>'; });
-  html += '</tbody>';
-  document.getElementById('csv-preview-table').innerHTML = html;
-}
-
-function toggleCsvListOptions() {
-  const choice = document.querySelector('input[name="csv-list-choice"]:checked')?.value;
-  document.getElementById('csv-existing-list').style.display = choice==='existing'?'block':'none';
-  document.getElementById('csv-new-list-name').style.display = choice==='new'?'block':'none';
-}
-
-async function confirmCsvImport() {
-  if (!pendingCsvData) return;
-  const mapping = {};
-  CSV_FIELDS.forEach(f => { const s=document.getElementById('map-'+f.key); if(s) mapping[f.key]=parseInt(s.value); });
-  if (mapping.phone < 0) { notify('Please map the Phone Number column.', true); return; }
-  const choice = document.querySelector('input[name="csv-list-choice"]:checked')?.value;
-  let listId = null, listName = null;
-  if (choice === 'existing') { const sel=document.getElementById('csv-existing-list'); listId=sel.value; listName=sel.options[sel.selectedIndex]?.text; }
-  else if (choice === 'new') {
-    listName = document.getElementById('csv-new-list-name').value.trim();
-    if (!listName) { notify('Please enter a list name.', true); return; }
-    listId = listName.toLowerCase().replace(/[^a-z0-9]/g,'_');
-    const lists = getLists();
-    if (!lists.find(l=>l.id===listId)) { lists.push({id:listId,name:listName}); await saveSettingsData({lists}); loadListDropdown(false); renderNewContactLists(); }
-  }
-  document.getElementById('csv-mapping-modal').style.display = 'none';
-  document.getElementById('import-result').innerHTML = '<p style="color:var(--gold);"><span class="spinner"></span> Importing...</p>';
-  try {
-    const res = await fetch('/contacts/import', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ csv:pendingCsvData, mapping, listId, listName }) });
-    const data = await res.json();
-    document.getElementById('import-result').innerHTML = `<p style="color:#4ade80;">✅ ${data.imported} contacts imported${listName?' into "'+listName+'"':''}!</p>`;
-    notify(`✅ ${data.imported} contacts imported!`);
-    pendingCsvData=null; csvPreviewData=null;
-    document.getElementById('csv-input').value = '';
-    loadContacts(); loadContactCount();
-  } catch (err) { document.getElementById('import-result').innerHTML=`<p style="color:#f87171;">Error: ${err.message}</p>`; }
-}
+function handleDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f)processCSV(f);}
+function handleFileSelect(e){const f=e.target.files[0];if(f)processCSV(f);}
+async function processCSV(file){const reader=new FileReader();reader.onload=async(ev)=>{pendingCsvData=ev.target.result;document.getElementById('import-result').innerHTML='<p style="color:var(--gold);">Reading file...</p>';try{const res=await fetch('/contacts/csv-preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv:pendingCsvData})});csvPreviewData=await res.json();openCsvMappingModal(csvPreviewData);document.getElementById('import-result').innerHTML='';}catch(err){document.getElementById('import-result').innerHTML='<p style="color:#f87171;">Error: '+err.message+'</p>';}};reader.readAsText(file);}
+function openCsvMappingModal(preview){const{headers,rows,total}=preview;document.getElementById('csv-total-count').textContent=total+' contact'+(total!==1?'s':'')+' found in file';const skipOpt='<option value="-1">— Skip —</option>';const headerOpts=headers.map((h,i)=>'<option value="'+i+'">'+h+'</option>').join('');function autoDetect(kw){return headers.findIndex(h=>kw.some(k=>h.toLowerCase().includes(k)));}const autoMap={firstName:autoDetect(['first','fname','given']),lastName:autoDetect(['last','lname','surname','family']),fullName:autoDetect(['full name','fullname','contact name','name']),phone:autoDetect(['phone','mobile','cell','tel','number']),list:autoDetect(['list','group','tag','category'])};if(autoMap.firstName>=0||autoMap.lastName>=0)autoMap.fullName=-1;document.getElementById('csv-mapping-fields').innerHTML=CSV_FIELDS.map(f=>'<div><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;display:block;">'+f.label+'</label><select id="map-'+f.key+'" style="font-size:13px;" onchange="updateCsvPreview()">'+skipOpt+headerOpts+'</select></div>').join('');CSV_FIELDS.forEach(f=>{const sel=document.getElementById('map-'+f.key);if(sel&&autoMap[f.key]>=0)sel.value=autoMap[f.key];});updateCsvPreview();const listSel=document.getElementById('csv-existing-list');listSel.innerHTML=getLists().filter(l=>l.id!=='all').map(l=>'<option value="'+l.id+'">'+l.name+'</option>').join('');document.querySelector('input[name="csv-list-choice"][value="existing"]').checked=true;toggleCsvListOptions();document.getElementById('csv-mapping-modal').style.display='flex';}
+function updateCsvPreview(){if(!csvPreviewData)return;const{headers,rows}=csvPreviewData;const mapping={};CSV_FIELDS.forEach(f=>{const s=document.getElementById('map-'+f.key);if(s)mapping[f.key]=parseInt(s.value);});const mappedCols=new Set(Object.values(mapping).filter(v=>v>=0));const mapLabels={};CSV_FIELDS.forEach(f=>{if(mapping[f.key]>=0)mapLabels[mapping[f.key]]=f.label.replace('📞 ','').replace(' ✱ required','');});let html='<thead><tr>';headers.forEach((h,i)=>{const m=mappedCols.has(i);html+='<th style="padding:7px 10px;font-size:10px;'+(m?'background:rgba(201,168,76,0.15);color:var(--gold);':'color:var(--muted);')+'">'+h+(m?'<br><span style="font-size:9px;opacity:0.7;">→ '+mapLabels[i]+'</span>':'')+'</th>';});html+='</tr></thead><tbody>';rows.forEach(row=>{html+='<tr>';row.forEach((v,i)=>{html+='<td style="padding:6px 10px;'+(mappedCols.has(i)?'color:var(--cream);':'color:var(--muted);opacity:0.5;')+'">'+(v||'—')+'</td>';});html+='</tr>';});html+='</tbody>';document.getElementById('csv-preview-table').innerHTML=html;}
+function toggleCsvListOptions(){const choice=document.querySelector('input[name="csv-list-choice"]:checked')?.value;document.getElementById('csv-existing-list').style.display=choice==='existing'?'block':'none';document.getElementById('csv-new-list-name').style.display=choice==='new'?'block':'none';}
+async function confirmCsvImport(){if(!pendingCsvData)return;const mapping={};CSV_FIELDS.forEach(f=>{const s=document.getElementById('map-'+f.key);if(s)mapping[f.key]=parseInt(s.value);});if(mapping.phone<0){notify('Please map the Phone Number column.',true);return;}const choice=document.querySelector('input[name="csv-list-choice"]:checked')?.value;let listId=null,listName=null;if(choice==='existing'){const sel=document.getElementById('csv-existing-list');listId=sel.value;listName=sel.options[sel.selectedIndex]?.text;}else if(choice==='new'){listName=document.getElementById('csv-new-list-name').value.trim();if(!listName){notify('Please enter a list name.',true);return;}listId=listName.toLowerCase().replace(/[^a-z0-9]/g,'_');const lists=getLists();if(!lists.find(l=>l.id===listId)){lists.push({id:listId,name:listName});await saveSettingsData({lists});loadListDropdown(false);renderNewContactLists();}}document.getElementById('csv-mapping-modal').style.display='none';document.getElementById('import-result').innerHTML='<p style="color:var(--gold);"><span class="spinner"></span> Importing...</p>';try{const res=await fetch('/contacts/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv:pendingCsvData,mapping,listId,listName})});const data=await res.json();document.getElementById('import-result').innerHTML='<p style="color:#4ade80;">✅ '+data.imported+' contacts imported'+(listName?' into "'+listName+'"':'')+'!</p>';notify('✅ '+data.imported+' contacts imported!');pendingCsvData=null;csvPreviewData=null;document.getElementById('csv-input').value='';loadContacts();loadContactCount();}catch(err){document.getElementById('import-result').innerHTML='<p style="color:#f87171;">Error: '+err.message+'</p>';}}
 
 // ── INIT ──────────────────────────────────────────────────
-fetch('/settings').then(r=>r.json()).then(s=>{
-  currentSettings=s;
-  loadListDropdown(true);
-  updatePreview();
-  onEventTypeChange();
-  renderTicketOptions();
-}).catch(()=>{ updatePreview(); onEventTypeChange(); renderTicketOptions(); });
-
+fetch('/settings').then(r=>r.json()).then(s=>{currentSettings=s;loadListDropdown(true);updatePreview();onEventTypeChange();renderTicketOptions();}).catch(()=>{updatePreview();onEventTypeChange();renderTicketOptions();});
 fetch('/contacts').then(r=>r.json()).then(c=>{allContacts=c;loadContactCount();}).catch(()=>{});
 </script>
 </body>
