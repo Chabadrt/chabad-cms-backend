@@ -389,125 +389,226 @@ function showTab(name,el){
 }
 function notify(msg,isError=false){const n=document.getElementById('notif');document.getElementById('notif-msg').textContent=msg;n.className='notif show'+(isError?' error':'');setTimeout(()=>n.classList.remove('show'),4000);}
 function getLists(){return currentSettings.lists||[];}
-async function loadSettingsData(){try{const r=await fetch('/settings');currentSettings=await r.json();return currentSettings;}catch{return {};}}
+async function loadSettingsData(){try{const r=await fetch('/settings');currentSettings=await r.json();return currentSettings;}catch(e){return {};}}
 async function loadSettings(){await loadSettingsData();['botIntro','rsvpPrompt','noReply','donationAsk','donationThankYou','confirmationNote','unrecognizedReply'].forEach(f=>{const el=document.getElementById('s-'+f);if(el)el.value=currentSettings[f]||'';});updatePreview();}
 async function saveSettingsData(partial){const merged={...currentSettings,...partial};const res=await fetch('/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(merged)});const data=await res.json();currentSettings=data.settings||merged;return currentSettings;}
-async function saveSettings(){const settings={botIntro:document.getElementById('s-botIntro').value,rsvpPrompt:document.getElementById('s-rsvpPrompt').value,noReply:document.getElementById('s-noReply').value,donationAsk:document.getElementById('s-donationAsk').value,donationThankYou:document.getElementById('s-donationThankYou').value,confirmationNote:document.getElementById('s-confirmationNote').value,unrecognizedReply:document.getElementById('s-unrecognizedReply').value};try{await saveSettingsData(settings);document.getElementById('saved-badge').classList.add('show');setTimeout(()=>document.getElementById('saved-badge').classList.remove('show'),2500);notify('✅ Settings saved!');}catch{notify('Could not save settings',true);}}
+async function saveSettings(){const settings={botIntro:document.getElementById('s-botIntro').value,rsvpPrompt:document.getElementById('s-rsvpPrompt').value,noReply:document.getElementById('s-noReply').value,donationAsk:document.getElementById('s-donationAsk').value,donationThankYou:document.getElementById('s-donationThankYou').value,confirmationNote:document.getElementById('s-confirmationNote').value,unrecognizedReply:document.getElementById('s-unrecognizedReply').value};try{await saveSettingsData(settings);document.getElementById('saved-badge').classList.add('show');setTimeout(()=>document.getElementById('saved-badge').classList.remove('show'),2500);notify('✅ Settings saved!');}catch(e){notify('Could not save settings',true);}}
 
-function loadListDropdown(forceDefault=false){const lists=getLists();const container=document.getElementById('list-checkboxes');if(!container)return;container.innerHTML=lists.map(l=>'<label class="list-check-item"><input type="checkbox" value="'+l.id+'" class="list-checkbox" onchange="excludedPhones=new Set();updateContactCountDisplay();loadContactCount()" style="width:15px;height:15px;accent-color:var(--gold);">'+l.name+'<span id="lcount-'+l.id+'" style="font-size:11px;color:var(--muted);margin-left:auto;"></span></label>').join('');const checkboxes=[...document.querySelectorAll('.list-checkbox')];const testChk=checkboxes.find(c=>c.parentElement.textContent.toLowerCase().includes('test'));if(forceDefault||!checkboxes.some(c=>c.checked)){if(testChk)testChk.checked=true;else if(checkboxes.length)checkboxes[0].checked=true;}loadContactCount();}
+function loadListDropdown(forceDefault){
+  if(forceDefault===undefined)forceDefault=false;
+  const lists=getLists();
+  const container=document.getElementById('list-checkboxes');
+  if(!container)return;
+  container.innerHTML=lists.map(function(l){
+    return '<label class="list-check-item"><input type="checkbox" value="'+l.id+'" class="list-checkbox" onchange="excludedPhones=new Set();updateContactCountDisplay();loadContactCount()" style="width:15px;height:15px;accent-color:var(--gold);">'+l.name+'<span id="lcount-'+l.id+'" style="font-size:11px;color:var(--muted);margin-left:auto;"></span></label>';
+  }).join('');
+  const checkboxes=[].slice.call(document.querySelectorAll('.list-checkbox'));
+  const testChk=checkboxes.find(function(c){return c.parentElement.textContent.toLowerCase().indexOf('test')>-1;});
+  if(forceDefault||!checkboxes.some(function(c){return c.checked;})){
+    if(testChk)testChk.checked=true;
+    else if(checkboxes.length)checkboxes[0].checked=true;
+  }
+  loadContactCount();
+}
 function renderNewContactLists(){const lists=getLists().filter(l=>l.id!=='all');const container=document.getElementById('new-contact-lists');if(!container)return;container.innerHTML=lists.map(l=>'<label class="list-check-item"><input type="checkbox" value="'+l.id+'" class="new-contact-list-check" style="width:15px;height:15px;accent-color:var(--gold);">'+l.name+'</label>').join('');}
 async function loadListsTab(){await loadSettingsData();renderListsManager();renderListSummary();}
-function renderListsManager(){const lists=getLists();const container=document.getElementById('lists-manager');if(!lists.length){container.innerHTML='<p style="color:var(--muted);">No lists yet.</p>';return;}container.innerHTML=lists.map(l=>'<div class="list-item"><input type="text" value="'+l.name+'" onchange="renameList(''+l.id+'',this.value)" style="flex:1;"><span id="lmgr-count-'+l.id+'" style="font-size:12px;color:var(--muted);min-width:60px;text-align:right;"></span>'+(l.id==='all'?'<span style="font-size:12px;color:var(--muted);">default</span>':'<button class="btn btn-outline btn-sm" onclick="openBulkRemove(''+l.id+'',''+l.name+'')" style="font-size:11.5px;">👥 Manage</button><button class="btn btn-danger btn-sm" onclick="removeList(''+l.id+'')" style="font-size:11.5px;">🗑️ Delete</button>')+'</div>').join('');fetch('/contacts').then(r=>r.json()).then(contacts=>{lists.forEach(l=>{const el=document.getElementById('lmgr-count-'+l.id);if(el){const n=l.id==='all'?contacts.length:contacts.filter(c=>c.lists?.includes(l.id)).length;el.textContent=n+' contacts';}});}).catch(()=>{});}
-function renderListSummary(){fetch('/contacts').then(r=>r.json()).then(contacts=>{const lists=getLists();let html='<table><thead><tr><th>List</th><th>Contacts</th></tr></thead><tbody>';lists.forEach(l=>{const n=l.id==='all'?contacts.length:contacts.filter(c=>c.lists?.includes(l.id)).length;html+='<tr><td>'+l.name+'</td><td>'+n+'</td></tr>';});html+='</tbody></table>';document.getElementById('list-summary').innerHTML=html;}).catch(()=>{document.getElementById('list-summary').innerHTML='<p style="color:#f87171;">Could not load.</p>';});}
+function renderListsManager(){
+  const lists=getLists();
+  const container=document.getElementById('lists-manager');
+  if(!lists.length){container.innerHTML='<p style="color:var(--muted);">No lists yet.</p>';return;}
+  container.innerHTML=lists.map(function(l){
+    const actions=(l.id==='all')
+      ? '<span style="font-size:12px;color:var(--muted);">default</span>'
+      : '<button class="btn btn-outline btn-sm" onclick="openBulkRemove(\''+l.id+'\',\''+l.name+'\')" style="font-size:11.5px;">👥 Manage</button><button class="btn btn-danger btn-sm" onclick="removeList(\''+l.id+'\')" style="font-size:11.5px;">🗑️ Delete</button>';
+    return '<div class="list-item"><input type="text" value="'+l.name+'" onchange="renameList(\''+l.id+'\',this.value)" style="flex:1;"><span id="lmgr-count-'+l.id+'" style="font-size:12px;color:var(--muted);min-width:60px;text-align:right;"></span>'+actions+'</div>';
+  }).join('');
+  fetch('/contacts').then(r=>r.json()).then(function(contacts){
+    lists.forEach(function(l){
+      const el=document.getElementById('lmgr-count-'+l.id);
+      if(el){const n=l.id==='all'?contacts.length:contacts.filter(c=>(c.lists||[]).indexOf(l.id)>-1).length;el.textContent=n+' contacts';}
+    });
+  }).catch(function(){});
+}
+function renderListSummary(){fetch('/contacts').then(r=>r.json()).then(function(contacts){const lists=getLists();let html='<table><thead><tr><th>List</th><th>Contacts</th></tr></thead><tbody>';lists.forEach(function(l){const n=l.id==='all'?contacts.length:contacts.filter(c=>(c.lists||[]).indexOf(l.id)>-1).length;html+='<tr><td>'+l.name+'</td><td>'+n+'</td></tr>';});html+='</tbody></table>';document.getElementById('list-summary').innerHTML=html;}).catch(function(){document.getElementById('list-summary').innerHTML='<p style="color:#f87171;">Could not load.</p>';});}
 async function addList(){const nameInput=document.getElementById('new-list-name');const name=nameInput.value.trim();if(!name){notify('Please enter a list name',true);return;}const id=name.toLowerCase().replace(/[^a-z0-9]/g,'_');const lists=getLists();if(lists.find(l=>l.id===id)){notify('List already exists',true);return;}lists.push({id,name});await saveSettingsData({lists});nameInput.value='';renderListsManager();renderListSummary();loadListDropdown();renderNewContactLists();notify('✅ "'+name+'" list added!');}
 async function renameList(id,newName){const lists=getLists().map(l=>l.id===id?{...l,name:newName}:l);await saveSettingsData({lists});loadListDropdown();}
 async function removeList(id){if(!confirm('Remove this list? Contacts will not be deleted.'))return;const lists=getLists().filter(l=>l.id!==id);await saveSettingsData({lists});renderListsManager();renderListSummary();loadListDropdown();renderNewContactLists();notify('List removed.');}
 
-async function loadContacts(){try{const res=await fetch('/contacts');allContacts=await res.json();populateContactsFilter();filterContactsTable();}catch{document.getElementById('contacts-table').innerHTML='<p style="color:#f87171;">Could not load contacts.</p>';}}
-function populateContactsFilter(){const sel=document.getElementById('contacts-filter');if(!sel)return;const current=sel.value;sel.innerHTML='<option value="all">All Contacts</option><option value="unlisted">Not in any list</option>';getLists().filter(l=>l.id!=='all').forEach(l=>{const opt=document.createElement('option');opt.value=l.id;opt.textContent=l.name;sel.appendChild(opt);});sel.value=current||'all';}
-function renderContactsTable(contacts){if(!contacts.length){document.getElementById('contacts-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No contacts found.</p>';return;}let html='<p style="font-size:13px;color:var(--muted);margin-bottom:10px;">'+contacts.length+' contact'+(contacts.length!==1?'s':'')+'</p>';html+='<table><thead><tr><th>Name</th><th>Phone</th><th>Lists</th><th>Status</th><th></th></tr></thead><tbody>';for(const c of contacts){const lists=(c.lists||[]).filter(l=>l!=='all').map(lid=>{const l=getLists().find(x=>x.id===lid);return l?l.name:lid;}).join(', ')||'—';const phone=encodeURIComponent(c.phone);const nameSafe=(c.name||'').replace(/'/g,"\'");const unsubBadge=c.unsubscribed?'<span style="font-size:11px;color:#f87171;background:rgba(192,57,43,0.15);padding:2px 7px;border-radius:10px;">Unsubscribed</span>':'';html+='<tr><td>'+(c.name||'—')+'</td><td style="font-size:12px;">'+c.phone+'</td><td style="font-size:12px;">'+lists+'</td><td>'+unsubBadge+'</td><td style="display:flex;gap:6px;"><button class="btn btn-outline btn-sm" onclick="openEditModal(''+phone+'',''+nameSafe+'')">Edit Lists</button><button class="btn btn-danger btn-sm" onclick="openDeleteContactModal(''+phone+'',''+nameSafe+'')">🗑️</button></td></tr>';}html+='</tbody></table>';document.getElementById('contacts-table').innerHTML=html;}
-function filterContactsTable(){const q=(document.getElementById('contacts-search')?.value||'').toLowerCase();const filter=document.getElementById('contacts-filter')?.value||'all';let filtered=allContacts;if(filter==='unlisted')filtered=filtered.filter(c=>(c.lists||[]).filter(l=>l!=='all').length===0);else if(filter!=='all')filtered=filtered.filter(c=>(c.lists||[]).includes(filter));if(q)filtered=filtered.filter(c=>(c.name||'').toLowerCase().includes(q)||c.phone.includes(q));renderContactsTable(filtered);}
-async function createAndSelectList(){const input=document.getElementById('new-list-inline');const name=input.value.trim();if(!name)return;const id=name.toLowerCase().replace(/[^a-z0-9]/g,'_');const lists=getLists();if(!lists.find(l=>l.id===id)){lists.push({id,name});await saveSettingsData({lists});notify('✅ List "'+name+'" created!');}renderNewContactLists();setTimeout(()=>{const chk=document.querySelector('.new-contact-list-check[value="'+id+'"]');if(chk)chk.checked=true;},50);input.value='';loadListDropdown();}
-async function addIndividualContact(){const first=document.getElementById('new-first').value.trim();const last=document.getElementById('new-last').value.trim();const phone=document.getElementById('new-phone').value.trim();if(!first||!phone){notify('Please enter at least a first name and phone number',true);return;}const inlineList=document.getElementById('new-list-inline').value.trim();if(inlineList)await createAndSelectList();const name=[first,last].filter(Boolean).join(' ');const selected=[...document.querySelectorAll('.new-contact-list-check:checked')].map(c=>c.value);const lists=selected.length?selected:['all'];try{await fetch('/contacts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,name,lists})});['new-first','new-last','new-phone','new-list-inline'].forEach(id=>document.getElementById(id).value='');document.querySelectorAll('.new-contact-list-check').forEach(c=>c.checked=false);notify('✅ '+name+' added!');loadContacts();loadContactCount();}catch{notify('Could not add contact',true);}}
-function openEditModal(encodedPhone,name){editingPhone=decodeURIComponent(encodedPhone);document.getElementById('edit-modal-name').textContent=name+' · '+editingPhone;const contact=allContacts.find(c=>c.phone===editingPhone);const currentLists=contact?.lists||[];document.getElementById('edit-modal-lists').innerHTML=getLists().filter(l=>l.id!=='all').map(l=>'<label class="list-check-item"><input type="checkbox" value="'+l.id+'" class="edit-list-check" style="width:15px;height:15px;accent-color:var(--gold);"'+(currentLists.includes(l.id)?' checked':'')+'>'+l.name+'</label>').join('');document.getElementById('edit-modal').style.display='flex';}
-async function saveContactLists(){const selected=[...document.querySelectorAll('.edit-list-check:checked')].map(c=>c.value);const lists=selected.length?selected:['all'];try{await fetch('/contacts/'+encodeURIComponent(editingPhone),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({lists})});document.getElementById('edit-modal').style.display='none';notify('✅ Contact lists updated!');loadContacts();loadContactCount();}catch{notify('Could not update contact',true);}}
-function openDeleteContactModal(encodedPhone,name){deletingPhone=decodeURIComponent(encodedPhone);const contact=allContacts.find(c=>c.phone===deletingPhone);document.getElementById('delete-contact-info').textContent=(name||deletingPhone)+' · '+deletingPhone;const lists=(contact?.lists||[]).filter(l=>l!=='all').map(lid=>{const l=getLists().find(x=>x.id===lid);return l?l.name:lid;});document.getElementById('delete-contact-lists').innerHTML=lists.length?'Currently in: <strong>'+lists.join(', ')+'</strong>':'Not in any specific list.';document.getElementById('delete-contact-modal').style.display='flex';}
+async function loadContacts(){try{const res=await fetch('/contacts');allContacts=await res.json();populateContactsFilter();filterContactsTable();}catch(e){document.getElementById('contacts-table').innerHTML='<p style="color:#f87171;">Could not load contacts.</p>';}}
+function populateContactsFilter(){const sel=document.getElementById('contacts-filter');if(!sel)return;const current=sel.value;sel.innerHTML='<option value="all">All Contacts</option><option value="unlisted">Not in any list</option>';getLists().filter(l=>l.id!=='all').forEach(function(l){const opt=document.createElement('option');opt.value=l.id;opt.textContent=l.name;sel.appendChild(opt);});sel.value=current||'all';}
+function renderContactsTable(contacts){
+  if(!contacts.length){document.getElementById('contacts-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No contacts found.</p>';return;}
+  let html='<p style="font-size:13px;color:var(--muted);margin-bottom:10px;">'+contacts.length+' contact'+(contacts.length!==1?'s':'')+'</p>';
+  html+='<table><thead><tr><th>Name</th><th>Phone</th><th>Lists</th><th>Status</th><th></th></tr></thead><tbody>';
+  for(const c of contacts){
+    const lists=(c.lists||[]).filter(l=>l!=='all').map(function(lid){const l=getLists().find(x=>x.id===lid);return l?l.name:lid;}).join(', ')||'—';
+    const phone=encodeURIComponent(c.phone);
+    const nameSafe=(c.name||'').replace(/'/g,"\\'");
+    const unsubBadge=c.unsubscribed?'<span style="font-size:11px;color:#f87171;background:rgba(192,57,43,0.15);padding:2px 7px;border-radius:10px;">Unsubscribed</span>':'';
+    html+='<tr><td>'+(c.name||'—')+'</td><td style="font-size:12px;">'+c.phone+'</td><td style="font-size:12px;">'+lists+'</td><td>'+unsubBadge+'</td><td style="display:flex;gap:6px;"><button class="btn btn-outline btn-sm" onclick="openEditModal(\''+phone+'\',\''+nameSafe+'\')">Edit Lists</button><button class="btn btn-danger btn-sm" onclick="openDeleteContactModal(\''+phone+'\',\''+nameSafe+'\')">🗑️</button></td></tr>';
+  }
+  html+='</tbody></table>';
+  document.getElementById('contacts-table').innerHTML=html;
+}
+function filterContactsTable(){const searchEl=document.getElementById('contacts-search');const filterEl=document.getElementById('contacts-filter');const q=(searchEl?searchEl.value:'').toLowerCase();const filter=filterEl?filterEl.value:'all';let filtered=allContacts;if(filter==='unlisted')filtered=filtered.filter(c=>(c.lists||[]).filter(l=>l!=='all').length===0);else if(filter!=='all')filtered=filtered.filter(c=>(c.lists||[]).indexOf(filter)>-1);if(q)filtered=filtered.filter(c=>(c.name||'').toLowerCase().indexOf(q)>-1||c.phone.indexOf(q)>-1);renderContactsTable(filtered);}
+async function createAndSelectList(){const input=document.getElementById('new-list-inline');const name=input.value.trim();if(!name)return;const id=name.toLowerCase().replace(/[^a-z0-9]/g,'_');const lists=getLists();if(!lists.find(l=>l.id===id)){lists.push({id,name});await saveSettingsData({lists});notify('✅ List "'+name+'" created!');}renderNewContactLists();setTimeout(function(){const chk=document.querySelector('.new-contact-list-check[value="'+id+'"]');if(chk)chk.checked=true;},50);input.value='';loadListDropdown();}
+async function addIndividualContact(){const first=document.getElementById('new-first').value.trim();const last=document.getElementById('new-last').value.trim();const phone=document.getElementById('new-phone').value.trim();if(!first||!phone){notify('Please enter at least a first name and phone number',true);return;}const inlineList=document.getElementById('new-list-inline').value.trim();if(inlineList)await createAndSelectList();const name=[first,last].filter(Boolean).join(' ');const selected=[].slice.call(document.querySelectorAll('.new-contact-list-check:checked')).map(c=>c.value);const lists=selected.length?selected:['all'];try{await fetch('/contacts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,name,lists})});['new-first','new-last','new-phone','new-list-inline'].forEach(id=>document.getElementById(id).value='');document.querySelectorAll('.new-contact-list-check').forEach(c=>c.checked=false);notify('✅ '+name+' added!');loadContacts();loadContactCount();}catch(e){notify('Could not add contact',true);}}
+function openEditModal(encodedPhone,name){editingPhone=decodeURIComponent(encodedPhone);document.getElementById('edit-modal-name').textContent=name+' · '+editingPhone;const contact=allContacts.find(c=>c.phone===editingPhone);const currentLists=(contact&&contact.lists)||[];document.getElementById('edit-modal-lists').innerHTML=getLists().filter(l=>l.id!=='all').map(l=>'<label class="list-check-item"><input type="checkbox" value="'+l.id+'" class="edit-list-check" style="width:15px;height:15px;accent-color:var(--gold);"'+(currentLists.indexOf(l.id)>-1?' checked':'')+'>'+l.name+'</label>').join('');document.getElementById('edit-modal').style.display='flex';}
+async function saveContactLists(){const selected=[].slice.call(document.querySelectorAll('.edit-list-check:checked')).map(c=>c.value);const lists=selected.length?selected:['all'];try{await fetch('/contacts/'+encodeURIComponent(editingPhone),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({lists})});document.getElementById('edit-modal').style.display='none';notify('✅ Contact lists updated!');loadContacts();loadContactCount();}catch(e){notify('Could not update contact',true);}}
+function openDeleteContactModal(encodedPhone,name){deletingPhone=decodeURIComponent(encodedPhone);const contact=allContacts.find(c=>c.phone===deletingPhone);document.getElementById('delete-contact-info').textContent=(name||deletingPhone)+' · '+deletingPhone;const lists=((contact&&contact.lists)||[]).filter(l=>l!=='all').map(function(lid){const l=getLists().find(x=>x.id===lid);return l?l.name:lid;});document.getElementById('delete-contact-lists').innerHTML=lists.length?'Currently in: <strong>'+lists.join(', ')+'</strong>':'Not in any specific list.';document.getElementById('delete-contact-modal').style.display='flex';}
 async function removeFromAllLists(){if(!deletingPhone)return;try{await fetch('/contacts/'+encodeURIComponent(deletingPhone),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({lists:['all']})});document.getElementById('delete-contact-modal').style.display='none';notify('✅ Removed from all lists.');loadContacts();loadContactCount();}catch(err){notify('Error: '+err.message,true);}}
 async function deleteContactPermanently(){if(!deletingPhone)return;if(!confirm('Permanently delete '+deletingPhone+'?'))return;try{const res=await fetch('/contacts/'+encodeURIComponent(deletingPhone),{method:'DELETE'});if(res.ok){document.getElementById('delete-contact-modal').style.display='none';notify('✅ Contact deleted.');loadContacts();loadContactCount();}else{const err=await res.json();notify('Error: '+(err.error||'Failed'),true);}}catch(err){notify('Error: '+err.message,true);}}
-function openBulkRemove(listId,listName){bulkRemoveListId=listId;document.getElementById('bulk-remove-list-name').textContent=listName;document.getElementById('bulk-remove-search').value='';document.getElementById('bulk-remove-modal').style.display='flex';fetch('/contacts').then(r=>r.json()).then(contacts=>{bulkRemoveContacts=contacts.filter(c=>(c.lists||[]).includes(listId));renderBulkContacts(bulkRemoveContacts);});}
+function openBulkRemove(listId,listName){bulkRemoveListId=listId;document.getElementById('bulk-remove-list-name').textContent=listName;document.getElementById('bulk-remove-search').value='';document.getElementById('bulk-remove-modal').style.display='flex';fetch('/contacts').then(r=>r.json()).then(function(contacts){bulkRemoveContacts=contacts.filter(c=>(c.lists||[]).indexOf(listId)>-1);renderBulkContacts(bulkRemoveContacts);});}
 function renderBulkContacts(contacts){const container=document.getElementById('bulk-remove-contacts');if(!contacts.length){container.innerHTML='<p style="color:var(--muted);padding:16px;font-size:13px;">No contacts in this list.</p>';return;}container.innerHTML=contacts.map(c=>'<label class="list-check-item" style="cursor:pointer;"><input type="checkbox" value="'+c.phone+'" class="bulk-remove-check" onchange="updateBulkCount()" style="width:15px;height:15px;accent-color:var(--gold);"><div><div style="font-size:13.5px;font-weight:500;">'+(c.name||'—')+'</div><div style="font-size:11.5px;color:var(--muted);">'+c.phone+'</div></div></label>').join('');updateBulkCount();}
-function filterBulkContacts(){const q=document.getElementById('bulk-remove-search').value.toLowerCase();renderBulkContacts(bulkRemoveContacts.filter(c=>(c.name||'').toLowerCase().includes(q)||c.phone.includes(q)));}
+function filterBulkContacts(){const q=document.getElementById('bulk-remove-search').value.toLowerCase();renderBulkContacts(bulkRemoveContacts.filter(c=>(c.name||'').toLowerCase().indexOf(q)>-1||c.phone.indexOf(q)>-1));}
 function updateBulkCount(){const n=document.querySelectorAll('.bulk-remove-check:checked').length;document.getElementById('bulk-remove-count').textContent=n?n+' selected':'';}
 function selectAllBulk(){document.querySelectorAll('.bulk-remove-check').forEach(c=>c.checked=true);updateBulkCount();}
 function deselectAllBulk(){document.querySelectorAll('.bulk-remove-check').forEach(c=>c.checked=false);updateBulkCount();}
-async function confirmBulkRemove(){const phones=[...document.querySelectorAll('.bulk-remove-check:checked')].map(c=>c.value);if(!phones.length){notify('No contacts selected.',true);return;}if(!confirm('Remove '+phones.length+' contact'+(phones.length!==1?'s':'')+' from this list?'))return;try{const res=await fetch('/contacts/bulk-remove-from-list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phones,listId:bulkRemoveListId})});const data=await res.json();if(data.success){notify('✅ '+data.removed+' contact'+(data.removed!==1?'s':'')+' removed.');document.getElementById('bulk-remove-modal').style.display='none';loadContacts();loadContactCount();renderListsManager();renderListSummary();}else notify('Error: '+(data.error||'Failed'),true);}catch(err){notify('Network error: '+err.message,true);}}
-async function confirmBulkDelete(){const phones=[...document.querySelectorAll('.bulk-remove-check:checked')].map(c=>c.value);if(!phones.length){notify('No contacts selected.',true);return;}if(!confirm('Permanently DELETE '+phones.length+' contact'+(phones.length!==1?'s':'')+'?'))return;try{const res=await fetch('/contacts/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phones})});const data=await res.json();if(data.success){notify('✅ '+data.deleted+' contact'+(data.deleted!==1?'s':'')+' deleted.');document.getElementById('bulk-remove-modal').style.display='none';loadContacts();loadContactCount();renderListsManager();renderListSummary();}else notify('Error: '+(data.error||'Failed'),true);}catch(err){notify('Network error: '+err.message,true);}}
+async function confirmBulkRemove(){const phones=[].slice.call(document.querySelectorAll('.bulk-remove-check:checked')).map(c=>c.value);if(!phones.length){notify('No contacts selected.',true);return;}if(!confirm('Remove '+phones.length+' contact'+(phones.length!==1?'s':'')+' from this list?'))return;try{const res=await fetch('/contacts/bulk-remove-from-list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phones,listId:bulkRemoveListId})});const data=await res.json();if(data.success){notify('✅ '+data.removed+' contact'+(data.removed!==1?'s':'')+' removed.');document.getElementById('bulk-remove-modal').style.display='none';loadContacts();loadContactCount();renderListsManager();renderListSummary();}else notify('Error: '+(data.error||'Failed'),true);}catch(err){notify('Network error: '+err.message,true);}}
+async function confirmBulkDelete(){const phones=[].slice.call(document.querySelectorAll('.bulk-remove-check:checked')).map(c=>c.value);if(!phones.length){notify('No contacts selected.',true);return;}if(!confirm('Permanently DELETE '+phones.length+' contact'+(phones.length!==1?'s':'')+'?'))return;try{const res=await fetch('/contacts/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phones})});const data=await res.json();if(data.success){notify('✅ '+data.deleted+' contact'+(data.deleted!==1?'s':'')+' deleted.');document.getElementById('bulk-remove-modal').style.display='none';loadContacts();loadContactCount();renderListsManager();renderListSummary();}else notify('Error: '+(data.error||'Failed'),true);}catch(err){notify('Network error: '+err.message,true);}}
 
 // ── EXCLUDE CONTACTS FROM BLAST ───────────────────────────
-function openExcludeModal(){const selected=[...document.querySelectorAll('.list-checkbox:checked')].map(c=>c.value);if(!selected.length){notify('Please select a list first.',true);return;}const contacts=allContacts.filter(c=>!c.unsubscribed&&(selected.includes('all')||(c.lists||[]).some(l=>selected.includes(l))));const seen=new Set();excludeModalContacts=contacts.filter(c=>{if(seen.has(c.phone))return false;seen.add(c.phone);return true;});document.getElementById('exclude-search').value='';renderExcludeList(excludeModalContacts);document.getElementById('exclude-modal').style.display='flex';}
+function openExcludeModal(){const selected=[].slice.call(document.querySelectorAll('.list-checkbox:checked')).map(c=>c.value);if(!selected.length){notify('Please select a list first.',true);return;}const contacts=allContacts.filter(c=>!c.unsubscribed&&(selected.indexOf('all')>-1||(c.lists||[]).some(l=>selected.indexOf(l)>-1)));const seen=new Set();excludeModalContacts=contacts.filter(function(c){if(seen.has(c.phone))return false;seen.add(c.phone);return true;});document.getElementById('exclude-search').value='';renderExcludeList(excludeModalContacts);document.getElementById('exclude-modal').style.display='flex';}
 function renderExcludeList(contacts){const container=document.getElementById('exclude-contacts-list');if(!contacts.length){container.innerHTML='<p style="color:var(--muted);padding:16px;font-size:13px;">No contacts found.</p>';return;}container.innerHTML=contacts.map(c=>'<label class="list-check-item" style="cursor:pointer;"><input type="checkbox" value="'+c.phone+'" class="exclude-check"'+(excludedPhones.has(c.phone)?'':' checked')+' onchange="updateExcludeCount()" style="width:15px;height:15px;accent-color:var(--gold);"><div><div style="font-size:13.5px;font-weight:500;">'+(c.name||'—')+'</div><div style="font-size:11.5px;color:var(--muted);">'+c.phone+'</div></div></label>').join('');updateExcludeCount();}
-function filterExcludeList(){const q=document.getElementById('exclude-search').value.toLowerCase();renderExcludeList(excludeModalContacts.filter(c=>(c.name||'').toLowerCase().includes(q)||c.phone.includes(q)));}
+function filterExcludeList(){const q=document.getElementById('exclude-search').value.toLowerCase();renderExcludeList(excludeModalContacts.filter(c=>(c.name||'').toLowerCase().indexOf(q)>-1||c.phone.indexOf(q)>-1));}
 function updateExcludeCount(){const checked=document.querySelectorAll('.exclude-check:checked').length;const total=document.querySelectorAll('.exclude-check').length;document.getElementById('exclude-selected-count').textContent=checked+' of '+total+' will receive blast';}
 function selectAllExclude(){document.querySelectorAll('.exclude-check').forEach(c=>c.checked=true);updateExcludeCount();}
 function deselectAllExclude(){document.querySelectorAll('.exclude-check').forEach(c=>c.checked=false);updateExcludeCount();}
-function confirmExclusions(){excludedPhones=new Set();document.querySelectorAll('.exclude-check').forEach(chk=>{if(!chk.checked)excludedPhones.add(chk.value);});document.getElementById('exclude-modal').style.display='none';updateContactCountDisplay();}
+function confirmExclusions(){excludedPhones=new Set();document.querySelectorAll('.exclude-check').forEach(function(chk){if(!chk.checked)excludedPhones.add(chk.value);});document.getElementById('exclude-modal').style.display='none';updateContactCountDisplay();}
 
 // ── CONTACT COUNT ─────────────────────────────────────────
-async function loadContactCount(){try{const res=await fetch('/contacts');const contacts=await res.json();allContacts=contacts;getLists().forEach(l=>{const el=document.getElementById('lcount-'+l.id);if(el){const n=l.id==='all'?contacts.length:contacts.filter(c=>c.lists?.includes(l.id)).length;el.textContent=n+' contacts';}});updateContactCountDisplay();}catch{}}
-function updateContactCountDisplay(){const selected=[...document.querySelectorAll('.list-checkbox:checked')].map(c=>c.value);if(!selected.length){document.getElementById('contact-count').textContent='No list selected';document.getElementById('review-btn').style.display='none';document.getElementById('excluded-count').style.display='none';return;}const contacts=allContacts.filter(c=>!c.unsubscribed&&(selected.includes('all')||(c.lists||[]).some(l=>selected.includes(l))));const seen=new Set();const unique=contacts.filter(c=>{if(seen.has(c.phone))return false;seen.add(c.phone);return true;});const sending=unique.filter(c=>!excludedPhones.has(c.phone));document.getElementById('contact-count').textContent=sending.length+' unique contact'+(sending.length!==1?'s':'')+' will receive this message';document.getElementById('review-btn').style.display='inline-flex';const excEl=document.getElementById('excluded-count');if(excludedPhones.size>0){excEl.textContent=excludedPhones.size+' excluded';excEl.style.display='inline';}else excEl.style.display='none';}
+async function loadContactCount(){try{const res=await fetch('/contacts');const contacts=await res.json();allContacts=contacts;getLists().forEach(function(l){const el=document.getElementById('lcount-'+l.id);if(el){const n=l.id==='all'?contacts.length:contacts.filter(c=>(c.lists||[]).indexOf(l.id)>-1).length;el.textContent=n+' contacts';}});updateContactCountDisplay();}catch(e){console.error('[loadContactCount]',e);}}
+function updateContactCountDisplay(){
+  const selected=[].slice.call(document.querySelectorAll('.list-checkbox:checked')).map(c=>c.value);
+  const countEl=document.getElementById('contact-count');
+  const reviewBtn=document.getElementById('review-btn');
+  const excEl=document.getElementById('excluded-count');
+  if(!countEl)return;
+  if(!selected.length){countEl.textContent='No list selected';reviewBtn.style.display='none';excEl.style.display='none';return;}
+  const contacts=allContacts.filter(c=>!c.unsubscribed&&(selected.indexOf('all')>-1||(c.lists||[]).some(l=>selected.indexOf(l)>-1)));
+  const seen=new Set();
+  const unique=contacts.filter(function(c){if(seen.has(c.phone))return false;seen.add(c.phone);return true;});
+  const sending=unique.filter(c=>!excludedPhones.has(c.phone));
+  countEl.textContent=sending.length+' unique contact'+(sending.length!==1?'s':'')+' will receive this message';
+  reviewBtn.style.display='inline-flex';
+  if(excludedPhones.size>0){excEl.textContent=excludedPhones.size+' excluded';excEl.style.display='inline';}
+  else excEl.style.display='none';
+}
 
 // ── EVENT TYPE ────────────────────────────────────────────
-function onEventTypeChange(){const type=document.querySelector('input[name="event-type"]:checked')?.value||'free_rsvp';const isAnnouncement=type==='announcement';const showTickets=type==='paid'||type==='paid_donation';const showDonation=type==='free_donation'||type==='paid_donation';document.getElementById('ticket-settings').style.display=showTickets?'block':'none';document.getElementById('donation-settings').style.display=showDonation?'block':'none';document.getElementById('rsvp-options').style.display=isAnnouncement?'none':'block';['free_rsvp','free_donation','paid','paid_donation','announcement'].forEach(t=>{const lbl=document.getElementById('et-'+t+'-lbl');if(lbl){lbl.style.borderColor=t===type?'var(--gold)':'rgba(201,168,76,0.2)';lbl.style.borderWidth=t===type?'2px':'1px';}});const label=document.getElementById('receipt-type-label');if(label){if(type==='paid'||type==='paid_donation')label.textContent='(Event payment receipt — sent after ticket payment)';else if(type==='free_donation')label.textContent='(Donation receipt — sent after donation)';else label.textContent='(sent after payment — leave blank for default)';}updatePreview();}
+function onEventTypeChange(){
+  const checked=document.querySelector('input[name="event-type"]:checked');
+  const type=checked?checked.value:'free_rsvp';
+  const isAnnouncement=type==='announcement';
+  const showTickets=type==='paid'||type==='paid_donation';
+  const showDonation=type==='free_donation'||type==='paid_donation';
+  document.getElementById('ticket-settings').style.display=showTickets?'block':'none';
+  document.getElementById('donation-settings').style.display=showDonation?'block':'none';
+  document.getElementById('rsvp-options').style.display=isAnnouncement?'none':'block';
+  ['free_rsvp','free_donation','paid','paid_donation','announcement'].forEach(function(t){
+    const lbl=document.getElementById('et-'+t+'-lbl');
+    if(lbl){lbl.style.borderColor=t===type?'var(--gold)':'rgba(201,168,76,0.2)';lbl.style.borderWidth=t===type?'2px':'1px';}
+  });
+  const label=document.getElementById('receipt-type-label');
+  if(label){
+    if(type==='paid'||type==='paid_donation')label.textContent='(Event payment receipt — sent after ticket payment)';
+    else if(type==='free_donation')label.textContent='(Donation receipt — sent after donation)';
+    else label.textContent='(sent after payment — leave blank for default)';
+  }
+  updatePreview();
+}
 let ticketOptionsArr=[{label:'General Admission',price:''}];
-function renderTicketOptions(){const container=document.getElementById('ticket-options-list');if(!container)return;container.innerHTML=ticketOptionsArr.map((t,i)=>'<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;"><input type="text" value="'+t.label+'" placeholder="Ticket label" style="flex:2;font-size:13px;" oninput="ticketOptionsArr['+i+'].label=this.value"><div style="display:flex;align-items:center;gap:4px;flex:1;"><span style="color:var(--muted);font-size:14px;">$</span><input type="number" value="'+t.price+'" placeholder="0" min="0" style="font-size:13px;" oninput="ticketOptionsArr['+i+'].price=parseFloat(this.value)||0"></div>'+(ticketOptionsArr.length>1?'<button class="btn btn-danger btn-sm" onclick="removeTicketOption('+i+')" style="padding:5px 10px;">✕</button>':'')+'</div>').join('');}
+function renderTicketOptions(){const container=document.getElementById('ticket-options-list');if(!container)return;container.innerHTML=ticketOptionsArr.map(function(t,i){return '<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;"><input type="text" value="'+t.label+'" placeholder="Ticket label" style="flex:2;font-size:13px;" oninput="ticketOptionsArr['+i+'].label=this.value"><div style="display:flex;align-items:center;gap:4px;flex:1;"><span style="color:var(--muted);font-size:14px;">$</span><input type="number" value="'+t.price+'" placeholder="0" min="0" style="font-size:13px;" oninput="ticketOptionsArr['+i+'].price=parseFloat(this.value)||0"></div>'+(ticketOptionsArr.length>1?'<button class="btn btn-danger btn-sm" onclick="removeTicketOption('+i+')" style="padding:5px 10px;">✕</button>':'')+'</div>';}).join('');}
 function addTicketOption(){ticketOptionsArr.push({label:'',price:''});renderTicketOptions();}
 function removeTicketOption(i){ticketOptionsArr.splice(i,1);renderTicketOptions();}
 function togglePresetAmounts(){const on=document.getElementById('tog-preset').classList.contains('on');document.getElementById('preset-amounts-row').style.display=on?'block':'none';}
 
 // ── SEND MODE ─────────────────────────────────────────────
 function setSendMode(mode,el){sendMode=mode;document.querySelectorAll('.send-mode-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById('send-mode-list').style.display=mode==='list'?'block':'none';document.getElementById('send-mode-individual').style.display=mode==='individual'?'block':'none';if(mode==='individual')renderSendContactSelector();}
-function renderSendContactSelector(){const container=document.getElementById('send-contact-selector');if(!allContacts.length){fetch('/contacts').then(r=>r.json()).then(c=>{allContacts=c;renderSendContactSelector();});return;}container.innerHTML=allContacts.map(c=>{const lists=(c.lists||[]).filter(l=>l!=='all').map(lid=>{const l=getLists().find(x=>x.id===lid);return l?l.name:lid;}).join(', ');return '<div class="contact-item" onclick="toggleSendContact(''+encodeURIComponent(c.phone)+'')"><input type="checkbox" id="schk-'+encodeURIComponent(c.phone)+'" value="'+c.phone+'"><div><div class="contact-name">'+(c.name||'Unknown')+'</div><div class="contact-meta">'+c.phone+(lists?' · '+lists:'')+'</div></div></div>';}).join('');updateSelectedCount();}
+function renderSendContactSelector(){
+  const container=document.getElementById('send-contact-selector');
+  if(!allContacts.length){fetch('/contacts').then(r=>r.json()).then(function(c){allContacts=c;renderSendContactSelector();});return;}
+  container.innerHTML=allContacts.map(function(c){
+    const lists=(c.lists||[]).filter(l=>l!=='all').map(function(lid){const l=getLists().find(x=>x.id===lid);return l?l.name:lid;}).join(', ');
+    const ep=encodeURIComponent(c.phone);
+    return '<div class="contact-item" onclick="toggleSendContact(\''+ep+'\')"><input type="checkbox" id="schk-'+ep+'" value="'+c.phone+'"><div><div class="contact-name">'+(c.name||'Unknown')+'</div><div class="contact-meta">'+c.phone+(lists?' · '+lists:'')+'</div></div></div>';
+  }).join('');
+  updateSelectedCount();
+}
 function toggleSendContact(ep){const chk=document.getElementById('schk-'+ep);if(chk){chk.checked=!chk.checked;updateSelectedCount();}}
 function updateSelectedCount(){document.getElementById('selected-count').textContent=document.querySelectorAll('#send-contact-selector input:checked').length+' selected';}
 function selectAllSend(){document.querySelectorAll('#send-contact-selector input').forEach(c=>c.checked=true);updateSelectedCount();}
 function deselectAllSend(){document.querySelectorAll('#send-contact-selector input').forEach(c=>c.checked=false);updateSelectedCount();}
-function filterSendContacts(){const q=document.getElementById('contact-search').value.toLowerCase();document.querySelectorAll('#send-contact-selector .contact-item').forEach(item=>{item.style.display=item.textContent.toLowerCase().includes(q)?'flex':'none';});}
-function getSelectedPhones(contacts,selectedLists){if(!selectedLists.length)return[];const seen=new Set();const phones=[];for(const c of contacts){if(selectedLists.includes('all')||(c.lists||[]).some(l=>selectedLists.includes(l))){if(!seen.has(c.phone)){seen.add(c.phone);phones.push(c.phone);}}}return phones;}
+function filterSendContacts(){const q=document.getElementById('contact-search').value.toLowerCase();document.querySelectorAll('#send-contact-selector .contact-item').forEach(function(item){item.style.display=item.textContent.toLowerCase().indexOf(q)>-1?'flex':'none';});}
+function getSelectedPhones(contacts,selectedLists){if(!selectedLists.length)return[];const seen=new Set();const phones=[];for(const c of contacts){if(selectedLists.indexOf('all')>-1||(c.lists||[]).some(l=>selectedLists.indexOf(l)>-1)){if(!seen.has(c.phone)){seen.add(c.phone);phones.push(c.phone);}}}return phones;}
 
-function updatePreview(){const name=document.getElementById('evt-name').value||'[Event Name]';const date=document.getElementById('evt-date').value||'[Date]';const time=document.getElementById('evt-time').value||'[Time]';const msg=document.getElementById('evt-msg').value;const type=document.querySelector('input[name="event-type"]:checked')?.value||'free_rsvp';if(type==='announcement'){document.getElementById('preview').textContent='Hi [First Name]! '+(msg||'[Your message here]');return;}const intro=currentSettings.botIntro||"This is Rabbi Benjy's new texting bot 🤖";const prompt=currentSettings.rsvpPrompt||"Please reply:
-1 — I'll be there 🙏
-2 — Can't make it this time";let preview='Hi [First Name]! '+intro+'
-
-Will you be joining us for '+name+' '+date+' @ '+time+'?';if(msg)preview+='
-
-'+msg;preview+='
-
-'+prompt;document.getElementById('preview').textContent=preview;}
+function updatePreview(){
+  const name=document.getElementById('evt-name').value||'[Event Name]';
+  const date=document.getElementById('evt-date').value||'[Date]';
+  const time=document.getElementById('evt-time').value||'[Time]';
+  const msg=document.getElementById('evt-msg').value;
+  const checked=document.querySelector('input[name="event-type"]:checked');
+  const type=checked?checked.value:'free_rsvp';
+  if(type==='announcement'){document.getElementById('preview').textContent='Hi [First Name]! '+(msg||'[Your message here]');return;}
+  const intro=currentSettings.botIntro||"This is Rabbi Benjy's new texting bot 🤖";
+  const prompt=currentSettings.rsvpPrompt||"Please reply:\n1 — I'll be there 🙏\n2 — Can't make it this time";
+  let preview='Hi [First Name]! '+intro+'\n\nWill you be joining us for '+name+' '+date+' @ '+time+'?';
+  if(msg)preview+='\n\n'+msg;
+  preview+='\n\n'+prompt;
+  document.getElementById('preview').textContent=preview;
+}
 
 async function sendBlast(){
   const name=document.getElementById('evt-name').value;const date=document.getElementById('evt-date').value;const time=document.getElementById('evt-time').value;
-  const eventType=document.querySelector('input[name="event-type"]:checked')?.value||'free_rsvp';
+  const checkedType=document.querySelector('input[name="event-type"]:checked');
+  const eventType=checkedType?checkedType.value:'free_rsvp';
   const isAnnouncement=eventType==='announcement';
   if(!isAnnouncement&&(!name||!date||!time)){notify('Please fill in event name, date, and time',true);return;}
   if(isAnnouncement&&!document.getElementById('evt-msg').value.trim()){notify('Please enter your announcement message',true);return;}
   const customMessage=document.getElementById('evt-msg').value;const confirmationNote=document.getElementById('evt-confirm').value;
   const askHeadcount=!isAnnouncement&&document.getElementById('tog-headcount').classList.contains('on');
   const askDonation=eventType==='free_donation'||eventType==='paid_donation';
-  const receiptMessage=document.getElementById('evt-receipt-msg')?.value.trim()||'';
+  const receiptEl=document.getElementById('evt-receipt-msg');
+  const receiptMessage=receiptEl?receiptEl.value.trim():'';
   const receiptType=(eventType==='paid'||eventType==='paid_donation')?'event':'donation';
-  const usePreset=document.getElementById('tog-preset')?.classList.contains('on');
-  const useFreeform=document.getElementById('tog-freeform')?.classList.contains('on');
+  const presetEl=document.getElementById('tog-preset');
+  const freeformEl=document.getElementById('tog-freeform');
+  const usePreset=presetEl?presetEl.classList.contains('on'):false;
+  const useFreeform=freeformEl?freeformEl.classList.contains('on'):false;
   const donationAmounts=(askDonation&&usePreset)?[parseInt(document.getElementById('amt1').value)||5,parseInt(document.getElementById('amt2').value)||10,parseInt(document.getElementById('amt3').value)||18]:[];
   const tickets=(eventType==='paid'||eventType==='paid_donation')?ticketOptionsArr.filter(t=>t.label&&t.price>0):[];
 
   // Recent blast warning
   if(sendMode==='list'){
-    const selectedListIds=[...document.querySelectorAll('.list-checkbox:checked')].map(c=>c.value);
+    const selectedListIds=[].slice.call(document.querySelectorAll('.list-checkbox:checked')).map(c=>c.value);
     if(selectedListIds.length){
       try{
-        const[contactsRes,eventsRes]=await Promise.all([fetch('/contacts'),fetch('/events')]);
-        const contacts=await contactsRes.json();const events=await eventsRes.json();
+        const results=await Promise.all([fetch('/contacts'),fetch('/events')]);
+        const contacts=await results[0].json();const events=await results[1].json();
         const cutoff=Date.now()-48*60*60*1000;
-        const recentlyBlasted=contacts.filter(c=>{const inList=selectedListIds.includes('all')||(c.lists||[]).some(l=>selectedListIds.includes(l));if(!inList||!c.lastBlastAt)return false;return new Date(c.lastBlastAt).getTime()>cutoff;});
-        if(recentlyBlasted.length>0){const lastEvent=events.find(e=>e.id===recentlyBlasted[0]?.lastEventId);const hoursAgo=Math.round((Date.now()-new Date(recentlyBlasted[0].lastBlastAt).getTime())/3600000);const proceed=confirm('⚠️ Recent Blast Warning
-
-'+recentlyBlasted.length+' contact'+(recentlyBlasted.length!==1?'s':'')+' in this list were blasted '+(lastEvent?'"'+lastEvent.name+'"':'another event')+' about '+hoursAgo+' hour'+(hoursAgo!==1?'s':'')+' ago.
-
-If they reply, responses will be linked to THIS new event.
-
-Send anyway?');if(!proceed)return;}
+        const recentlyBlasted=contacts.filter(function(c){
+          const inList=selectedListIds.indexOf('all')>-1||(c.lists||[]).some(l=>selectedListIds.indexOf(l)>-1);
+          if(!inList||!c.lastBlastAt)return false;
+          return new Date(c.lastBlastAt).getTime()>cutoff;
+        });
+        if(recentlyBlasted.length>0){
+          const lastEvent=events.find(e=>e.id===recentlyBlasted[0].lastEventId);
+          const hoursAgo=Math.round((Date.now()-new Date(recentlyBlasted[0].lastBlastAt).getTime())/3600000);
+          const proceed=confirm('⚠️ Recent Blast Warning\n\n'+recentlyBlasted.length+' contact'+(recentlyBlasted.length!==1?'s':'')+' in this list were blasted '+(lastEvent?'"'+lastEvent.name+'"':'another event')+' about '+hoursAgo+' hour'+(hoursAgo!==1?'s':'')+' ago.\n\nIf they reply, responses will be linked to THIS new event.\n\nSend anyway?');
+          if(!proceed)return;
+        }
       }catch(e){}
     }
   }
 
   let phones=[];
   if(sendMode==='list'){
-    const selected=[...document.querySelectorAll('.list-checkbox:checked')].map(c=>c.value);
+    const selected=[].slice.call(document.querySelectorAll('.list-checkbox:checked')).map(c=>c.value);
     if(!selected.length){notify('Please select at least one list.',true);return;}
     const contacts=await fetch('/contacts').then(r=>r.json());
     const allPhones=getSelectedPhones(contacts,selected);
     phones=allPhones.filter(p=>!excludedPhones.has(p));
-  }else{phones=[...document.querySelectorAll('#send-contact-selector input:checked')].map(c=>c.value);}
+  }else{phones=[].slice.call(document.querySelectorAll('#send-contact-selector input:checked')).map(c=>c.value);}
   if(!phones.length){notify('No contacts selected.',true);return;}
   const btn=document.getElementById('send-btn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Sending...';
   try{
@@ -521,26 +622,203 @@ Send anyway?');if(!proceed)return;}
 }
 
 // ── RSVPs ─────────────────────────────────────────────────
-async function loadEvents(){try{const res=await fetch('/events');const events=await res.json();const sel=document.getElementById('event-selector');if(!events.length){sel.innerHTML='<option value="">No events yet</option>';document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No events yet.</p>';return;}sel.innerHTML=events.map(e=>'<option value="'+e.id+'">'+e.name+(e.eventType==='announcement'?' 📢':'')+(e.date?' — '+e.date:'')+' @ '+(e.time||'')+'</option>').join('');loadRsvpsForEvent(events[0].id);}catch{document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load events.</p>';}}
-async function loadRsvpsForEvent(eventId){if(!eventId)return;try{const[rsvpRes,eventsRes]=await Promise.all([fetch('/rsvps/'+eventId),fetch('/events')]);const rsvps=await rsvpRes.json();const events=await eventsRes.json();const event=events.find(e=>e.id===eventId);const isPaid=event?.eventType==='paid'||event?.eventType==='paid_donation';const sel=document.getElementById('event-selector');document.getElementById('rsvp-title').textContent='📋 '+(sel.options[sel.selectedIndex]?.text||'Event');if(!rsvps.length){['stat-yes','stat-no','stat-donations'].forEach(id=>document.getElementById(id).textContent=id==='stat-donations'?'$0':'0');document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No RSVPs yet.</p>';return;}document.getElementById('stat-yes').textContent=rsvps.filter(r=>r.status==='yes').length;document.getElementById('stat-no').textContent=rsvps.filter(r=>r.status==='no').length;const total=rsvps.reduce((s,r)=>s+(r.ticketPrice||0)+(r.donationAmount||0),0);document.getElementById('stat-donations').textContent='$'+total;let headers='<tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th>';if(isPaid)headers+='<th>Ticket</th><th>Payment</th>';headers+='<th>Donation</th></tr>';let html='<table><thead>'+headers+'</thead><tbody>';for(const r of rsvps){const badge=r.status==='yes'?'badge-yes':r.status==='no'?'badge-no':'';const label=r.status==='yes'?'✓ Yes':r.status==='no'?'✗ No':'⏳';html+='<tr><td>'+(r.name||'—')+'</td><td style="font-size:12px;">'+r.phone+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td>'+(r.guestCount||'—')+'</td>';if(isPaid){const td=r.ticketType?r.ticketType+' ($'+(r.ticketPrice||0)+')':'—';const pb=r.paymentStatus==='paid'?'<span class="badge badge-yes">✅ Paid</span>':r.paymentStatus==='pending'?'<span class="badge" style="background:rgba(234,179,8,0.15);color:#fbbf24;">⏳ Pending</span>':'—';html+='<td style="font-size:12px;">'+td+'</td><td>'+pb+'</td>';}html+='<td>'+(r.donationAmount?'$'+r.donationAmount:'—')+'</td></tr>';}html+='</tbody></table>';document.getElementById('rsvp-table').innerHTML=html;}catch{document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load RSVPs.</p>';}}
-function exportRsvps(){const sel=document.getElementById('event-selector');if(!sel?.value){notify('Please select an event first.',true);return;}const table=document.querySelector('#rsvp-table table');if(!table){notify('No RSVP data to export.',true);return;}let csv='';table.querySelectorAll('tr').forEach(row=>{csv+=Array.from(row.querySelectorAll('th,td')).map(c=>'"'+c.innerText.replace(/"/g,'""')+'"').join(',')+'
-';});const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(sel.options[sel.selectedIndex]?.text||'rsvps').replace(/[^a-z0-9]/gi,'_')+'_rsvps.csv';a.click();URL.revokeObjectURL(url);notify('✅ RSVPs exported!');}
-async function deleteEvent(){const sel=document.getElementById('event-selector');const eventId=sel?.value;const eventName=sel?.options[sel.selectedIndex]?.text;if(!eventId){notify('Please select an event first.',true);return;}if(!confirm('Delete "'+eventName+'"?
-
-This will permanently remove the event and all RSVPs.'))return;try{const res=await fetch('/api/events/'+encodeURIComponent(eventId),{method:'DELETE'});if(res.ok){notify('"'+eventName+'" deleted.');loadEvents();}else{const err=await res.json();notify('Error: '+(err.error||'Failed'),true);}}catch(err){notify('Network error: '+err.message,true);}}
+async function loadEvents(){
+  try{
+    const res=await fetch('/events');
+    const events=await res.json();
+    const sel=document.getElementById('event-selector');
+    if(!events.length){sel.innerHTML='<option value="">No events yet</option>';document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No events yet.</p>';return;}
+    sel.innerHTML=events.map(e=>'<option value="'+e.id+'">'+e.name+(e.eventType==='announcement'?' 📢':'')+(e.date?' — '+e.date:'')+' @ '+(e.time||'')+'</option>').join('');
+    loadRsvpsForEvent(events[0].id);
+  }catch(e){document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load events.</p>';}
+}
+async function loadRsvpsForEvent(eventId){
+  if(!eventId)return;
+  try{
+    const results=await Promise.all([fetch('/rsvps/'+eventId),fetch('/events')]);
+    const rsvps=await results[0].json();
+    const events=await results[1].json();
+    const event=events.find(e=>e.id===eventId);
+    const isPaid=event&&(event.eventType==='paid'||event.eventType==='paid_donation');
+    const sel=document.getElementById('event-selector');
+    const selOpt=sel.options[sel.selectedIndex];
+    document.getElementById('rsvp-title').textContent='📋 '+(selOpt?selOpt.text:'Event');
+    if(!rsvps.length){
+      ['stat-yes','stat-no','stat-donations'].forEach(id=>document.getElementById(id).textContent=id==='stat-donations'?'$0':'0');
+      document.getElementById('rsvp-table').innerHTML='<p style="color:var(--muted);padding:16px 0;">No RSVPs yet.</p>';
+      return;
+    }
+    document.getElementById('stat-yes').textContent=rsvps.filter(r=>r.status==='yes').length;
+    document.getElementById('stat-no').textContent=rsvps.filter(r=>r.status==='no').length;
+    const total=rsvps.reduce((s,r)=>s+(r.ticketPrice||0)+(r.donationAmount||0),0);
+    document.getElementById('stat-donations').textContent='$'+total;
+    let headers='<tr><th>Name</th><th>Phone</th><th>Status</th><th>Guests</th>';
+    if(isPaid)headers+='<th>Ticket</th><th>Payment</th>';
+    headers+='<th>Donation</th></tr>';
+    let html='<table><thead>'+headers+'</thead><tbody>';
+    for(const r of rsvps){
+      const badge=r.status==='yes'?'badge-yes':r.status==='no'?'badge-no':'';
+      const label=r.status==='yes'?'✓ Yes':r.status==='no'?'✗ No':'⏳';
+      html+='<tr><td>'+(r.name||'—')+'</td><td style="font-size:12px;">'+r.phone+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td>'+(r.guestCount||'—')+'</td>';
+      if(isPaid){
+        const td=r.ticketType?r.ticketType+' ($'+(r.ticketPrice||0)+')':'—';
+        const pb=r.paymentStatus==='paid'?'<span class="badge badge-yes">✅ Paid</span>':r.paymentStatus==='pending'?'<span class="badge" style="background:rgba(234,179,8,0.15);color:#fbbf24;">⏳ Pending</span>':'—';
+        html+='<td style="font-size:12px;">'+td+'</td><td>'+pb+'</td>';
+      }
+      html+='<td>'+(r.donationAmount?'$'+r.donationAmount:'—')+'</td></tr>';
+    }
+    html+='</tbody></table>';
+    document.getElementById('rsvp-table').innerHTML=html;
+  }catch(e){document.getElementById('rsvp-table').innerHTML='<p style="color:#f87171;">Could not load RSVPs.</p>';}
+}
+function exportRsvps(){
+  const sel=document.getElementById('event-selector');
+  if(!sel||!sel.value){notify('Please select an event first.',true);return;}
+  const table=document.querySelector('#rsvp-table table');
+  if(!table){notify('No RSVP data to export.',true);return;}
+  let csv='';
+  table.querySelectorAll('tr').forEach(function(row){
+    csv+=Array.prototype.slice.call(row.querySelectorAll('th,td')).map(c=>'"'+c.innerText.replace(/"/g,'""')+'"').join(',')+'\n';
+  });
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const selOpt=sel.options[sel.selectedIndex];
+  a.href=url;
+  a.download=(selOpt?selOpt.text:'rsvps').replace(/[^a-z0-9]/gi,'_')+'_rsvps.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  notify('✅ RSVPs exported!');
+}
+async function deleteEvent(){
+  const sel=document.getElementById('event-selector');
+  const eventId=sel?sel.value:null;
+  const selOpt=sel?sel.options[sel.selectedIndex]:null;
+  const eventName=selOpt?selOpt.text:'';
+  if(!eventId){notify('Please select an event first.',true);return;}
+  if(!confirm('Delete "'+eventName+'"?\n\nThis will permanently remove the event and all RSVPs.'))return;
+  try{
+    const res=await fetch('/api/events/'+encodeURIComponent(eventId),{method:'DELETE'});
+    if(res.ok){notify('"'+eventName+'" deleted.');loadEvents();}
+    else{const err=await res.json();notify('Error: '+(err.error||'Failed'),true);}
+  }catch(err){notify('Network error: '+err.message,true);}
+}
 
 // ── CSV MAPPING ───────────────────────────────────────────
 function handleDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f)processCSV(f);}
 function handleFileSelect(e){const f=e.target.files[0];if(f)processCSV(f);}
-async function processCSV(file){const reader=new FileReader();reader.onload=async(ev)=>{pendingCsvData=ev.target.result;document.getElementById('import-result').innerHTML='<p style="color:var(--gold);">Reading file...</p>';try{const res=await fetch('/contacts/csv-preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv:pendingCsvData})});csvPreviewData=await res.json();openCsvMappingModal(csvPreviewData);document.getElementById('import-result').innerHTML='';}catch(err){document.getElementById('import-result').innerHTML='<p style="color:#f87171;">Error: '+err.message+'</p>';}};reader.readAsText(file);}
-function openCsvMappingModal(preview){const{headers,rows,total}=preview;document.getElementById('csv-total-count').textContent=total+' contact'+(total!==1?'s':'')+' found in file';const skipOpt='<option value="-1">— Skip —</option>';const headerOpts=headers.map((h,i)=>'<option value="'+i+'">'+h+'</option>').join('');function autoDetect(kw){return headers.findIndex(h=>kw.some(k=>h.toLowerCase().includes(k)));}const autoMap={firstName:autoDetect(['first','fname','given']),lastName:autoDetect(['last','lname','surname','family']),fullName:autoDetect(['full name','fullname','contact name','name']),phone:autoDetect(['phone','mobile','cell','tel','number']),list:autoDetect(['list','group','tag','category'])};if(autoMap.firstName>=0||autoMap.lastName>=0)autoMap.fullName=-1;document.getElementById('csv-mapping-fields').innerHTML=CSV_FIELDS.map(f=>'<div><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;display:block;">'+f.label+'</label><select id="map-'+f.key+'" style="font-size:13px;" onchange="updateCsvPreview()">'+skipOpt+headerOpts+'</select></div>').join('');CSV_FIELDS.forEach(f=>{const sel=document.getElementById('map-'+f.key);if(sel&&autoMap[f.key]>=0)sel.value=autoMap[f.key];});updateCsvPreview();const listSel=document.getElementById('csv-existing-list');listSel.innerHTML=getLists().filter(l=>l.id!=='all').map(l=>'<option value="'+l.id+'">'+l.name+'</option>').join('');document.querySelector('input[name="csv-list-choice"][value="existing"]').checked=true;toggleCsvListOptions();document.getElementById('csv-mapping-modal').style.display='flex';}
-function updateCsvPreview(){if(!csvPreviewData)return;const{headers,rows}=csvPreviewData;const mapping={};CSV_FIELDS.forEach(f=>{const s=document.getElementById('map-'+f.key);if(s)mapping[f.key]=parseInt(s.value);});const mappedCols=new Set(Object.values(mapping).filter(v=>v>=0));const mapLabels={};CSV_FIELDS.forEach(f=>{if(mapping[f.key]>=0)mapLabels[mapping[f.key]]=f.label.replace('📞 ','').replace(' ✱ required','');});let html='<thead><tr>';headers.forEach((h,i)=>{const m=mappedCols.has(i);html+='<th style="padding:7px 10px;font-size:10px;'+(m?'background:rgba(201,168,76,0.15);color:var(--gold);':'color:var(--muted);')+'">'+h+(m?'<br><span style="font-size:9px;opacity:0.7;">→ '+mapLabels[i]+'</span>':'')+'</th>';});html+='</tr></thead><tbody>';rows.forEach(row=>{html+='<tr>';row.forEach((v,i)=>{html+='<td style="padding:6px 10px;'+(mappedCols.has(i)?'color:var(--cream);':'color:var(--muted);opacity:0.5;')+'">'+(v||'—')+'</td>';});html+='</tr>';});html+='</tbody>';document.getElementById('csv-preview-table').innerHTML=html;}
-function toggleCsvListOptions(){const choice=document.querySelector('input[name="csv-list-choice"]:checked')?.value;document.getElementById('csv-existing-list').style.display=choice==='existing'?'block':'none';document.getElementById('csv-new-list-name').style.display=choice==='new'?'block':'none';}
-async function confirmCsvImport(){if(!pendingCsvData)return;const mapping={};CSV_FIELDS.forEach(f=>{const s=document.getElementById('map-'+f.key);if(s)mapping[f.key]=parseInt(s.value);});if(mapping.phone<0){notify('Please map the Phone Number column.',true);return;}const choice=document.querySelector('input[name="csv-list-choice"]:checked')?.value;let listId=null,listName=null;if(choice==='existing'){const sel=document.getElementById('csv-existing-list');listId=sel.value;listName=sel.options[sel.selectedIndex]?.text;}else if(choice==='new'){listName=document.getElementById('csv-new-list-name').value.trim();if(!listName){notify('Please enter a list name.',true);return;}listId=listName.toLowerCase().replace(/[^a-z0-9]/g,'_');const lists=getLists();if(!lists.find(l=>l.id===listId)){lists.push({id:listId,name:listName});await saveSettingsData({lists});loadListDropdown(false);renderNewContactLists();}}document.getElementById('csv-mapping-modal').style.display='none';document.getElementById('import-result').innerHTML='<p style="color:var(--gold);"><span class="spinner"></span> Importing...</p>';try{const res=await fetch('/contacts/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv:pendingCsvData,mapping,listId,listName})});const data=await res.json();document.getElementById('import-result').innerHTML='<p style="color:#4ade80;">✅ '+data.imported+' contacts imported'+(listName?' into "'+listName+'"':'')+'!</p>';notify('✅ '+data.imported+' contacts imported!');pendingCsvData=null;csvPreviewData=null;document.getElementById('csv-input').value='';loadContacts();loadContactCount();}catch(err){document.getElementById('import-result').innerHTML='<p style="color:#f87171;">Error: '+err.message+'</p>';}}
+async function processCSV(file){
+  const reader=new FileReader();
+  reader.onload=async function(ev){
+    pendingCsvData=ev.target.result;
+    document.getElementById('import-result').innerHTML='<p style="color:var(--gold);">Reading file...</p>';
+    try{
+      const res=await fetch('/contacts/csv-preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv:pendingCsvData})});
+      csvPreviewData=await res.json();
+      openCsvMappingModal(csvPreviewData);
+      document.getElementById('import-result').innerHTML='';
+    }catch(err){document.getElementById('import-result').innerHTML='<p style="color:#f87171;">Error: '+err.message+'</p>';}
+  };
+  reader.readAsText(file);
+}
+function openCsvMappingModal(preview){
+  const headers=preview.headers,total=preview.total;
+  document.getElementById('csv-total-count').textContent=total+' contact'+(total!==1?'s':'')+' found in file';
+  const skipOpt='<option value="-1">— Skip —</option>';
+  const headerOpts=headers.map((h,i)=>'<option value="'+i+'">'+h+'</option>').join('');
+  function autoDetect(kw){return headers.findIndex(h=>kw.some(k=>h.toLowerCase().indexOf(k)>-1));}
+  const autoMap={firstName:autoDetect(['first','fname','given']),lastName:autoDetect(['last','lname','surname','family']),fullName:autoDetect(['full name','fullname','contact name','name']),phone:autoDetect(['phone','mobile','cell','tel','number']),list:autoDetect(['list','group','tag','category'])};
+  if(autoMap.firstName>=0||autoMap.lastName>=0)autoMap.fullName=-1;
+  document.getElementById('csv-mapping-fields').innerHTML=CSV_FIELDS.map(f=>'<div><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;display:block;">'+f.label+'</label><select id="map-'+f.key+'" style="font-size:13px;" onchange="updateCsvPreview()">'+skipOpt+headerOpts+'</select></div>').join('');
+  CSV_FIELDS.forEach(function(f){const sel=document.getElementById('map-'+f.key);if(sel&&autoMap[f.key]>=0)sel.value=autoMap[f.key];});
+  updateCsvPreview();
+  const listSel=document.getElementById('csv-existing-list');
+  listSel.innerHTML=getLists().filter(l=>l.id!=='all').map(l=>'<option value="'+l.id+'">'+l.name+'</option>').join('');
+  document.querySelector('input[name="csv-list-choice"][value="existing"]').checked=true;
+  toggleCsvListOptions();
+  document.getElementById('csv-mapping-modal').style.display='flex';
+}
+function updateCsvPreview(){
+  if(!csvPreviewData)return;
+  const headers=csvPreviewData.headers,rows=csvPreviewData.rows;
+  const mapping={};
+  CSV_FIELDS.forEach(function(f){const s=document.getElementById('map-'+f.key);if(s)mapping[f.key]=parseInt(s.value);});
+  const mappedCols=new Set(Object.keys(mapping).map(k=>mapping[k]).filter(v=>v>=0));
+  const mapLabels={};
+  CSV_FIELDS.forEach(function(f){if(mapping[f.key]>=0)mapLabels[mapping[f.key]]=f.label.replace('📞 ','').replace(' ✱ required','');});
+  let html='<thead><tr>';
+  headers.forEach(function(h,i){
+    const m=mappedCols.has(i);
+    html+='<th style="padding:7px 10px;font-size:10px;'+(m?'background:rgba(201,168,76,0.15);color:var(--gold);':'color:var(--muted);')+'">'+h+(m?'<br><span style="font-size:9px;opacity:0.7;">→ '+mapLabels[i]+'</span>':'')+'</th>';
+  });
+  html+='</tr></thead><tbody>';
+  rows.forEach(function(row){
+    html+='<tr>';
+    row.forEach(function(v,i){html+='<td style="padding:6px 10px;'+(mappedCols.has(i)?'color:var(--cream);':'color:var(--muted);opacity:0.5;')+'">'+(v||'—')+'</td>';});
+    html+='</tr>';
+  });
+  html+='</tbody>';
+  document.getElementById('csv-preview-table').innerHTML=html;
+}
+function toggleCsvListOptions(){const c=document.querySelector('input[name="csv-list-choice"]:checked');const choice=c?c.value:'existing';document.getElementById('csv-existing-list').style.display=choice==='existing'?'block':'none';document.getElementById('csv-new-list-name').style.display=choice==='new'?'block':'none';}
+async function confirmCsvImport(){
+  if(!pendingCsvData)return;
+  const mapping={};
+  CSV_FIELDS.forEach(function(f){const s=document.getElementById('map-'+f.key);if(s)mapping[f.key]=parseInt(s.value);});
+  if(mapping.phone<0){notify('Please map the Phone Number column.',true);return;}
+  const c=document.querySelector('input[name="csv-list-choice"]:checked');
+  const choice=c?c.value:'existing';
+  let listId=null,listName=null;
+  if(choice==='existing'){
+    const sel=document.getElementById('csv-existing-list');
+    const selOpt=sel.options[sel.selectedIndex];
+    listId=sel.value;listName=selOpt?selOpt.text:null;
+  }else if(choice==='new'){
+    listName=document.getElementById('csv-new-list-name').value.trim();
+    if(!listName){notify('Please enter a list name.',true);return;}
+    listId=listName.toLowerCase().replace(/[^a-z0-9]/g,'_');
+    const lists=getLists();
+    if(!lists.find(l=>l.id===listId)){lists.push({id:listId,name:listName});await saveSettingsData({lists});loadListDropdown(false);renderNewContactLists();}
+  }
+  document.getElementById('csv-mapping-modal').style.display='none';
+  document.getElementById('import-result').innerHTML='<p style="color:var(--gold);"><span class="spinner"></span> Importing...</p>';
+  try{
+    const res=await fetch('/contacts/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv:pendingCsvData,mapping,listId,listName})});
+    const data=await res.json();
+    document.getElementById('import-result').innerHTML='<p style="color:#4ade80;">✅ '+data.imported+' contacts imported'+(listName?' into "'+listName+'"':'')+'!</p>';
+    notify('✅ '+data.imported+' contacts imported!');
+    pendingCsvData=null;csvPreviewData=null;
+    document.getElementById('csv-input').value='';
+    loadContacts();loadContactCount();
+  }catch(err){document.getElementById('import-result').innerHTML='<p style="color:#f87171;">Error: '+err.message+'</p>';}
+}
 
 // ── INIT ──────────────────────────────────────────────────
-fetch('/settings').then(r=>r.json()).then(s=>{currentSettings=s;loadListDropdown(true);updatePreview();onEventTypeChange();renderTicketOptions();}).catch(()=>{updatePreview();onEventTypeChange();renderTicketOptions();});
-fetch('/contacts').then(r=>r.json()).then(c=>{allContacts=c;loadContactCount();}).catch(()=>{});
+async function init(){
+  try{
+    const res=await fetch('/settings');
+    currentSettings=await res.json();
+  }catch(err){
+    console.error('[INIT] settings failed:',err);
+    notify('Could not load settings from server.',true);
+  }
+  try{
+    loadListDropdown(true);
+  }catch(err){
+    console.error('[INIT] loadListDropdown failed:',err);
+    const countEl=document.getElementById('contact-count');
+    if(countEl)countEl.textContent='Could not load lists — see console.';
+  }
+  updatePreview();
+  onEventTypeChange();
+  renderTicketOptions();
+  try{
+    const res2=await fetch('/contacts');
+    allContacts=await res2.json();
+    loadContactCount();
+  }catch(err){console.error('[INIT] contacts failed:',err);}
+}
+init();
 </script>
 </body>
 </html>
