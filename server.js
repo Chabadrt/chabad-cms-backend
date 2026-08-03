@@ -190,7 +190,14 @@ app.patch('/contacts/:phone', (req, res) => { const phone = decodeURIComponent(r
 app.delete('/contacts/:phone', (req, res) => { try { db.deleteContact(decodeURIComponent(req.params.phone)); res.json({ success: true }); } catch (err) { res.status(500).json({ error: err.message }); } });
 app.post('/contacts/bulk-delete', (req, res) => { const { phones } = req.body; if (!phones?.length) return res.status(400).json({ error: 'phones required' }); try { db.bulkDeleteContacts(phones); res.json({ success: true, deleted: phones.length }); } catch (err) { res.status(500).json({ error: err.message }); } });
 app.post('/contacts/bulk-remove-from-list', (req, res) => { const { phones, listId } = req.body; if (!phones?.length||!listId) return res.status(400).json({ error: 'phones and listId required' }); try { db.removeContactsFromList(phones, listId); res.json({ success: true, removed: phones.length }); } catch (err) { res.status(500).json({ error: err.message }); } });
-app.post('/contacts/import', (req, res) => { const { csv, mapping, listId, listName } = req.body; if (!csv) return res.status(400).json({ error: 'No CSV data' }); try { res.json(importContacts(csv, mapping||{}, listId, listName)); } catch (err) { res.status(500).json({ error: err.message }); } });
+app.post('/contacts/import', (req, res) => {
+  const { csv, mapping, listId, listName, mergeLists } = req.body;
+  if (!csv) return res.status(400).json({ error: 'No CSV data' });
+  // Default to merging so an import never silently strips someone's existing lists
+  const merge = mergeLists !== false;
+  try { res.json(importContacts(csv, mapping||{}, listId, listName, merge)); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
 app.post('/contacts/csv-preview', (req, res) => { const { csv } = req.body; if (!csv) return res.status(400).json({ error: 'No CSV data' }); try { const { getCSVPreview } = require('./import'); res.json(getCSVPreview(csv, 3)); } catch (err) { res.status(500).json({ error: err.message }); } });
 
 // ── EVENTS ────────────────────────────────────────────────
