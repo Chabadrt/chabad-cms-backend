@@ -3,6 +3,8 @@ const db = require('./db');
 const { getSettings } = require('./settings');
 const { getOrCreateCustomer, getSavedCard, chargeCardOnFile, createPaymentLink, getReceiptText } = require('./payments');
 
+const DEFAULT_ANNOUNCEMENT_REPLY = 'This is an automated system. To reach the Rabbi please text (914) 330-1307';
+
 function getFirstName(c) { return c?.name ? c.name.split(' ')[0] : null; }
 function personalize(t, c) { const f = getFirstName(c); return f ? t.replace(/\{first_name\}/gi, f) : t; }
 
@@ -103,11 +105,11 @@ async function handleIncoming(from, body) {
 
 async function handleIdle(phone, msg, contact, conv, s) {
   const event = getEventForPhone(phone);
-  if (!event) return `Thanks for texting Chabad of the Rivertowns! Stay tuned for upcoming events. 💛\n\nReply STOP to unsubscribe.`;
+  if (!event) return s.announcementReply || DEFAULT_ANNOUNCEMENT_REPLY;
 
-  // Announcement — no RSVP needed, any reply gets a friendly response
+  // Announcement — one-way message, so any reply gets the automated notice
   if (event.eventType === 'announcement') {
-    return `Thanks for your message! Stay tuned for more updates from Chabad of the Rivertowns. 💛`;
+    return s.announcementReply || DEFAULT_ANNOUNCEMENT_REPLY;
   }
 
   const answer = parseYesNo(msg);
