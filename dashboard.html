@@ -265,6 +265,7 @@ td{padding:10px 11px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-ali
     <div class="form-group"><label>Donation Thank You</label><input type="text" id="s-donationThankYou"></div>
     <div class="form-group"><label>Default Confirmation Note</label><input type="text" id="s-confirmationNote"></div>
     <div class="form-group"><label>Unrecognized Reply</label><textarea id="s-unrecognizedReply" rows="2"></textarea></div>
+    <div class="form-group"><label>Announcement Auto-Reply <span class="hint">(sent when someone replies to an announcement-only blast)</span></label><textarea id="s-announcementReply" rows="2" placeholder="This is an automated system. To reach the Rabbi please text (914) 330-1307"></textarea></div>
     <button class="btn btn-gold" onclick="saveSettings()">💾 Save All Settings</button>
   </div>
 </div>
@@ -321,6 +322,12 @@ td{padding:10px 11px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-ali
       <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;cursor:pointer;margin-top:4px;"><input type="radio" name="csv-list-choice" value="new" onchange="toggleCsvListOptions()" style="width:15px;height:15px;accent-color:var(--gold);"> Create new list</label>
       <input type="text" id="csv-new-list-name" placeholder="New list name..." style="margin-left:23px;font-size:13px;max-width:280px;display:none;">
       <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;cursor:pointer;margin-top:4px;"><input type="radio" name="csv-list-choice" value="none" onchange="toggleCsvListOptions()" style="width:15px;height:15px;accent-color:var(--gold);"> Just All Contacts</label>
+    </div>
+    <div style="border-top:1px solid rgba(255,255,255,0.07);padding-top:16px;margin-bottom:20px;">
+      <label style="display:flex;align-items:flex-start;gap:9px;text-transform:none;letter-spacing:0;font-size:14px;cursor:pointer;margin-bottom:0;">
+        <input type="checkbox" id="csv-merge-lists" checked style="width:15px;height:15px;accent-color:var(--gold);margin-top:2px;">
+        <span>Keep people in the lists they're already in<span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Uncheck to move them out of every other list and into this one only.</span></span>
+      </label>
     </div>
     <div style="display:flex;gap:10px;">
       <button class="btn btn-gold" onclick="confirmCsvImport()">📥 Import Now</button>
@@ -390,9 +397,9 @@ function showTab(name,el){
 function notify(msg,isError=false){const n=document.getElementById('notif');document.getElementById('notif-msg').textContent=msg;n.className='notif show'+(isError?' error':'');setTimeout(()=>n.classList.remove('show'),4000);}
 function getLists(){return currentSettings.lists||[];}
 async function loadSettingsData(){try{const r=await fetch('/settings');currentSettings=await r.json();return currentSettings;}catch(e){return {};}}
-async function loadSettings(){await loadSettingsData();['botIntro','rsvpPrompt','noReply','donationAsk','donationThankYou','confirmationNote','unrecognizedReply'].forEach(f=>{const el=document.getElementById('s-'+f);if(el)el.value=currentSettings[f]||'';});updatePreview();}
+async function loadSettings(){await loadSettingsData();['botIntro','rsvpPrompt','noReply','donationAsk','donationThankYou','confirmationNote','unrecognizedReply','announcementReply'].forEach(f=>{const el=document.getElementById('s-'+f);if(el)el.value=currentSettings[f]||'';});updatePreview();}
 async function saveSettingsData(partial){const merged={...currentSettings,...partial};const res=await fetch('/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(merged)});const data=await res.json();currentSettings=data.settings||merged;return currentSettings;}
-async function saveSettings(){const settings={botIntro:document.getElementById('s-botIntro').value,rsvpPrompt:document.getElementById('s-rsvpPrompt').value,noReply:document.getElementById('s-noReply').value,donationAsk:document.getElementById('s-donationAsk').value,donationThankYou:document.getElementById('s-donationThankYou').value,confirmationNote:document.getElementById('s-confirmationNote').value,unrecognizedReply:document.getElementById('s-unrecognizedReply').value};try{await saveSettingsData(settings);document.getElementById('saved-badge').classList.add('show');setTimeout(()=>document.getElementById('saved-badge').classList.remove('show'),2500);notify('✅ Settings saved!');}catch(e){notify('Could not save settings',true);}}
+async function saveSettings(){const settings={botIntro:document.getElementById('s-botIntro').value,rsvpPrompt:document.getElementById('s-rsvpPrompt').value,noReply:document.getElementById('s-noReply').value,donationAsk:document.getElementById('s-donationAsk').value,donationThankYou:document.getElementById('s-donationThankYou').value,confirmationNote:document.getElementById('s-confirmationNote').value,unrecognizedReply:document.getElementById('s-unrecognizedReply').value,announcementReply:document.getElementById('s-announcementReply').value};try{await saveSettingsData(settings);document.getElementById('saved-badge').classList.add('show');setTimeout(()=>document.getElementById('saved-badge').classList.remove('show'),2500);notify('✅ Settings saved!');}catch(e){notify('Could not save settings',true);}}
 
 function loadListDropdown(forceDefault){
   if(forceDefault===undefined)forceDefault=false;
@@ -780,12 +787,15 @@ async function confirmCsvImport(){
     const lists=getLists();
     if(!lists.find(l=>l.id===listId)){lists.push({id:listId,name:listName});await saveSettingsData({lists});loadListDropdown(false);renderNewContactLists();}
   }
+  const mergeEl=document.getElementById('csv-merge-lists');
+  const mergeLists=mergeEl?mergeEl.checked:true;
   document.getElementById('csv-mapping-modal').style.display='none';
   document.getElementById('import-result').innerHTML='<p style="color:var(--gold);"><span class="spinner"></span> Importing...</p>';
   try{
-    const res=await fetch('/contacts/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv:pendingCsvData,mapping,listId,listName})});
+    const res=await fetch('/contacts/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv:pendingCsvData,mapping,listId,listName,mergeLists})});
     const data=await res.json();
-    document.getElementById('import-result').innerHTML='<p style="color:#4ade80;">✅ '+data.imported+' contacts imported'+(listName?' into "'+listName+'"':'')+'!</p>';
+    const mergeNote=(mergeLists&&data.merged)?' ('+data.merged+' also kept in earlier lists)':'';
+    document.getElementById('import-result').innerHTML='<p style="color:#4ade80;">✅ '+data.imported+' contacts imported'+(listName?' into "'+listName+'"':'')+mergeNote+'!</p>';
     notify('✅ '+data.imported+' contacts imported!');
     pendingCsvData=null;csvPreviewData=null;
     document.getElementById('csv-input').value='';
