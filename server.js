@@ -93,8 +93,15 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
   res.json({ received: true });
 });
 
+// Twilio calls this back with delivery status; error 21610 means the carrier or
+// Twilio's own opt-out list blocked the send because that number unsubscribed,
+// even if our own STOP/unsubscribe keyword matching never saw it happen.
+function statusCallbackUrl() {
+  return process.env.APP_URL ? `${process.env.APP_URL.replace(/\/$/, '')}/sms/status` : undefined;
+}
+
 async function smsOut(to, body) {
-  await twilioClient.messages.create({ body, from: process.env.TWILIO_PHONE_NUMBER, to });
+  await twilioClient.messages.create({ body, from: process.env.TWILIO_PHONE_NUMBER, to, statusCallback: statusCallbackUrl() });
   console.log(`[SMS OUT] → ${to}: "${body.substring(0,60)}..."`);
 }
 
@@ -138,7 +145,7 @@ app.post('/sms/incoming', async (req, res) => {
   if (msgLower === 'start') { db.saveContact(from, { unsubscribed: false }); return res.status(200).send('OK'); }
   try {
     const reply = await handleIncoming(from, body);
-    await twilioClient.messages.create({ body: reply, from: process.env.TWILIO_PHONE_NUMBER, to: from });
+    await twilioClient.messages.create({ body: reply, from: process.env.TWILIO_PHONE_NUMBER, to: from, statusCallback: statusCallbackUrl() });
     if (body.trim() === '1' || body.trim() === '2') {
       const contact = db.getContact(from);
       await twilioClient.messages.create({ body: `[RSVP] ${contact?.name||from}: ${body.trim()==='1'?'✅ YES':'❌ No'}`, from: process.env.TWILIO_PHONE_NUMBER, to: process.env.ADMIN_PHONE }).catch(()=>{});
@@ -149,6 +156,20 @@ app.post('/sms/incoming', async (req, res) => {
     try { await twilioClient.messages.create({ body: `Sorry, something went wrong. Please try again or call (914) 330-1307.`, from: process.env.TWILIO_PHONE_NUMBER, to: from }); } catch (e) {}
     res.status(200).send('OK');
   }
+});
+
+// ── SMS STATUS CALLBACK ───────────────────────────────────
+// Twilio posts delivery status here for every outbound message that included
+// a statusCallback. ErrorCode 21610 = Twilio/carrier blocked the send because
+// that number is on an opt-out list, which can happen even when our own
+// STOP-keyword matching in /sms/incoming never saw the opt-out come through.
+app.post('/sms/status', (req, res) => {
+  const to = req.body.To, errorCode = req.body.ErrorCode;
+  if (to && String(errorCode) === '21610') {
+    db.saveContact(to, { unsubscribed: true, unsubscribedAt: new Date().toISOString(), unsubscribedVia: 'twilio' });
+    console.log(`[SMS STATUS] ${to} opted out at Twilio/carrier level (21610) — marked unsubscribed`);
+  }
+  res.status(200).send('OK');
 });
 
 // ── BLAST ─────────────────────────────────────────────────
@@ -173,12 +194,16 @@ app.post('/blast', async (req, res) => {
       const firstName = contact?.name ? contact.name.split(' ')[0] : null;
       const greeting = isAnnouncement ? (firstName ? `Hi ${firstName}! ` : 'Hi! ') : (firstName ? `Hi ${firstName}! ` : 'Hi! ');
       const msgBody = `${greeting}${baseMsg}`;
-      await twilioClient.messages.create({ body: msgBody, from: process.env.TWILIO_PHONE_NUMBER, to: phone });
+      await twilioClient.messages.create({ body: msgBody, from: process.env.TWILIO_PHONE_NUMBER, to: phone, statusCallback: statusCallbackUrl() });
       db.saveContact(phone, { lastEventId: eventId, lastBlastAt: new Date().toISOString() });
       db.clearConversation(phone);
       sent++;
       await new Promise(r => setTimeout(r, 50));
-    } catch (err) { console.error(`[BLAST] ${phone}:`, err.message); failed++; }
+    } catch (err) {
+      console.error(`[BLAST] ${phone}:`, err.message);
+      if (err.code === 21610) db.saveContact(phone, { unsubscribed: true, unsubscribedAt: new Date().toISOString(), unsubscribedVia: 'twilio' });
+      failed++;
+    }
   }
   res.json({ success: true, eventId, sent, failed });
 });
