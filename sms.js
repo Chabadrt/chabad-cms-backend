@@ -66,7 +66,7 @@ function parseTicketQuantities(msg, tickets) {
 }
 
 function buildTicketMenu(tickets) {
-  const lines = tickets.map((t, i) => `${String.fromCharCode(65+i)}) ${t.label} — $${t.price}`).join('\n');
+  const lines = tickets.map((t, i) => `${String.fromCharCode(65+i)}) ${t.label} — ${parseFloat(t.price) > 0 ? '$' + t.price : 'Free'}`).join('\n');
   const ex = tickets.length >= 2 ? `"${tickets[0].label} 2 ${tickets[1].label} 1"\nor just numbers: "2 1"` : `"${tickets[0].label} 2" or just "2"`;
   return `${lines}\n\nHow many of each?\n${ex}`;
 }
@@ -166,18 +166,25 @@ async function handleTicketQuantities(phone, msg, contact, conv, s) {
     const price = parseFloat(ticket.price) || 0;
     const lineTotal = price * sel.qty;
     total += lineTotal;
-    summaryLines.push(`${sel.qty}x ${ticket.label} @ $${price} = $${lineTotal}`);
+    summaryLines.push(price > 0 ? `${sel.qty}x ${ticket.label} @ $${price} = $${lineTotal}` : `${sel.qty}x ${ticket.label} — Free`);
     ticketDesc.push(`${sel.qty}x ${ticket.label}`);
   }
   const descStr = ticketDesc.join(', ');
   console.log(`[TICKETS] total:${total} desc:${descStr}`);
-  if (total <= 0) { db.clearConversation(phone); return `There was a pricing issue. Please call (914) 330-1307.`; }
+  if (!descStr) { db.clearConversation(phone); return `There was a pricing issue. Please call (914) 330-1307.`; }
+  const isPaidDonation = event.eventType === 'paid_donation';
+  if (total <= 0) {
+    // Every ticket selected was free (e.g. kids-only) — no payment needed.
+    db.saveRsvp(event.id, phone, { ticketType: descStr, ticketPrice: 0, paymentStatus: 'not_required' });
+    db.clearConversation(phone);
+    if (isPaidDonation) return await startDonationFlow(phone, contact, event, s);
+    return `Here's your order:\n${summaryLines.join('\n')}\n\n${confirmationMessage(event, s)}`;
+  }
   db.saveRsvp(event.id, phone, { ticketType: descStr, ticketPrice: total, paymentStatus: 'pending' });
   let customerId = null, savedCard = null;
   try { customerId = await getOrCreateCustomer(phone, contact?.name); savedCard = customerId ? await getSavedCard(customerId) : null; }
   catch (err) { console.error('[TICKET STRIPE]', err.message); }
   const orderSummary = summaryLines.join('\n') + `\n\nTotal: $${total}`;
-  const isPaidDonation = event.eventType === 'paid_donation';
   if (savedCard) {
     const brandCap = savedCard.brand.charAt(0).toUpperCase() + savedCard.brand.slice(1);
     db.saveConversation(phone, { ...conv, step: 'await_card_confirm', pendingAmount: total, pendingLabel: descStr, isTicket: true, isPaidDonation, customerId, savedCard: { paymentMethodId: savedCard.paymentMethodId, brand: savedCard.brand, last4: savedCard.last4 } });

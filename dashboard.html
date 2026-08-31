@@ -584,7 +584,7 @@ async function sendBlast(){
   const usePreset=presetEl?presetEl.classList.contains('on'):false;
   const useFreeform=freeformEl?freeformEl.classList.contains('on'):false;
   const donationAmounts=(askDonation&&usePreset)?[parseInt(document.getElementById('amt1').value)||5,parseInt(document.getElementById('amt2').value)||10,parseInt(document.getElementById('amt3').value)||18]:[];
-  const tickets=(eventType==='paid'||eventType==='paid_donation')?ticketOptionsArr.filter(t=>t.label&&t.price>0):[];
+  const tickets=(eventType==='paid'||eventType==='paid_donation')?ticketOptionsArr.filter(t=>t.label&&Number(t.price)>=0):[];
 
   // Recent blast warning
   if(sendMode==='list'){
