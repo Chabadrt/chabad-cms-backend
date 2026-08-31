@@ -42,24 +42,50 @@ function buildDonationMenu(event, s) {
 
 function parseTicketQuantities(msg, tickets) {
   const m = msg.toLowerCase().trim();
-  const selections = [];
+
+  const matches = [];
   for (let i = 0; i < tickets.length; i++) {
     const base = tickets[i].label.toLowerCase().replace(/e?s+$/, '');
     const labelMatch = m.match(new RegExp(`${base}s?`, 'i'));
     if (!labelMatch) continue;
     const labelPos = m.indexOf(labelMatch[0]);
-    const afterStr = m.substring(labelPos + labelMatch[0].length, labelPos + labelMatch[0].length + 8);
-    const beforeStr = m.substring(Math.max(0, labelPos - 4), labelPos);
-    const numAfter = afterStr.match(/^\s*:?\s*(\d+)/);
-    const numBefore = beforeStr.match(/(\d+)\s*$/);
-    if (numAfter) { const qty = parseInt(numAfter[1]); if (qty > 0) selections.push({ ticketIndex: i, qty }); }
-    else if (numBefore) {
-      const qty = parseInt(numBefore[1]);
-      const alreadyUsed = selections.some(s => { const pp = m.indexOf(tickets[s.ticketIndex].label.toLowerCase()); const tn = m.lastIndexOf(String(qty), labelPos); return Math.abs(pp - tn) < Math.abs(labelPos - tn); });
-      if (!alreadyUsed) selections.push({ ticketIndex: i, qty });
-    }
+    matches.push({ ticketIndex: i, labelPos, labelEnd: labelPos + labelMatch[0].length });
   }
-  if (selections.length > 0) return selections;
+  matches.sort((a, b) => a.labelPos - b.labelPos);
+
+  if (matches.length > 0) {
+    // Figure out whether this message states quantities before each label
+    // ("2 adults, 1 child") or after it ("Adult 2 Child 1"), using whichever
+    // side is adjacent to the FIRST label, then read every label the same
+    // way — people don't mix the two styles in one message.
+    const first = matches[0];
+    const beforeFirst = m.substring(Math.max(0, first.labelPos - 4), first.labelPos);
+    // A number immediately before the very first label only ever shows up
+    // in the "2 adults, 1 child" style (an "Adult 2 Child 1" message has
+    // nothing before its first label at all), so its presence alone is
+    // enough to tell the two styles apart.
+    const readBefore = /(\d+)\s*$/.test(beforeFirst);
+
+    const selections = [];
+    matches.forEach((entry, idx) => {
+      const { ticketIndex, labelPos, labelEnd } = entry;
+      const prevEnd = idx > 0 ? matches[idx - 1].labelEnd : 0;
+      const nextPos = idx < matches.length - 1 ? matches[idx + 1].labelPos : m.length;
+      let qty = null;
+      if (readBefore) {
+        const beforeStr = m.substring(Math.max(prevEnd, labelPos - 4), labelPos);
+        const numBefore = beforeStr.match(/(\d+)\s*$/);
+        if (numBefore) qty = parseInt(numBefore[1]);
+      } else {
+        const afterStr = m.substring(labelEnd, Math.min(labelEnd + 8, nextPos));
+        const numAfter = afterStr.match(/^\s*:?\s*(\d+)/);
+        if (numAfter) qty = parseInt(numAfter[1]);
+      }
+      if (qty !== null && qty > 0) selections.push({ ticketIndex, qty });
+    });
+    if (selections.length > 0) return selections;
+  }
+
   const nums = m.match(/\d+/g);
   if (nums) { const r = []; for (let i = 0; i < Math.min(nums.length, tickets.length); i++) { const q = parseInt(nums[i]); if (q > 0) r.push({ ticketIndex: i, qty: q }); } if (r.length) return r; }
   return null;
