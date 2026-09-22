@@ -40,14 +40,23 @@ function buildDonationMenu(event, s) {
   return menu;
 }
 
-// Ticket labels are typed by the rabbi (e.g. "Child", "Adult") and plurals
-// in replies don't all follow the regular "add an s" rule (child -> children).
-const IRREGULAR_PLURALS = { child: 'children', person: 'people', man: 'men', woman: 'women' };
+// Ticket labels are typed by the rabbi (e.g. "Child", "Adult") but replies
+// don't all use that exact word: plurals don't all follow the regular
+// "add an s" rule (child -> children), and some people use a different
+// word entirely (kid/kids for child).
+// Alternatives are ordered longest-first so e.g. "children" isn't cut short
+// by an earlier match on the "child" prefix.
+const LABEL_ALIASES = {
+  child: ['children|child', 'kids?'],
+  person: ['people|person'],
+  man: ['men|man'],
+  woman: ['women|woman'],
+};
 
 function labelPattern(label) {
   const base = label.toLowerCase().replace(/e?s+$/, '');
-  const irregular = IRREGULAR_PLURALS[base];
-  return irregular ? `(?:${irregular}|${base})` : `${base}s?`;
+  const aliases = LABEL_ALIASES[base];
+  return aliases ? `(?:${aliases.join('|')})` : `${base}s?`;
 }
 
 function parseTicketQuantities(msg, tickets) {
