@@ -40,13 +40,22 @@ function buildDonationMenu(event, s) {
   return menu;
 }
 
+// Ticket labels are typed by the rabbi (e.g. "Child", "Adult") and plurals
+// in replies don't all follow the regular "add an s" rule (child -> children).
+const IRREGULAR_PLURALS = { child: 'children', person: 'people', man: 'men', woman: 'women' };
+
+function labelPattern(label) {
+  const base = label.toLowerCase().replace(/e?s+$/, '');
+  const irregular = IRREGULAR_PLURALS[base];
+  return irregular ? `(?:${irregular}|${base})` : `${base}s?`;
+}
+
 function parseTicketQuantities(msg, tickets) {
   const m = msg.toLowerCase().trim();
 
   const matches = [];
   for (let i = 0; i < tickets.length; i++) {
-    const base = tickets[i].label.toLowerCase().replace(/e?s+$/, '');
-    const labelMatch = m.match(new RegExp(`${base}s?`, 'i'));
+    const labelMatch = m.match(new RegExp(labelPattern(tickets[i].label), 'i'));
     if (!labelMatch) continue;
     const labelPos = m.indexOf(labelMatch[0]);
     matches.push({ ticketIndex: i, labelPos, labelEnd: labelPos + labelMatch[0].length });
@@ -78,7 +87,7 @@ function parseTicketQuantities(msg, tickets) {
         if (numBefore) qty = parseInt(numBefore[1]);
       } else {
         const afterStr = m.substring(labelEnd, Math.min(labelEnd + 8, nextPos));
-        const numAfter = afterStr.match(/^\s*:?\s*(\d+)/);
+        const numAfter = afterStr.match(/^\s*[:,]?\s*(\d+)/);
         if (numAfter) qty = parseInt(numAfter[1]);
       }
       if (qty !== null && qty > 0) selections.push({ ticketIndex, qty });
