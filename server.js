@@ -6,13 +6,14 @@ const fs = require('fs');
 const { handleIncoming } = require('./sms');
 const { importContacts } = require('./import');
 const { getSettings, saveSettings } = require('./settings');
-const { getReceiptText } = require('./payments');
+const { getReceiptText, SIGN_OFF } = require('./payments');
 const db = require('./db');
 
 const app = express();
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // ── STRIPE WEBHOOK ────────────────────────────────────────
+const handledPayments = new Set();
 app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
   const sig = req.headers['stripe-signature'];
@@ -27,6 +28,16 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
     const obj = event.data.object;
     const amount = isCheckout ? obj.amount_total / 100 : obj.amount / 100;
     let phone = obj.metadata?.phone;
+
+    // A single payment-link payment fires BOTH checkout.session.completed and payment_intent.succeeded.
+    // Only act on the first one we see for each payment, or the person gets two texts.
+    const paymentKey = (isCheckout ? obj.payment_intent : obj.id) || obj.id;
+    if (handledPayments.has(paymentKey)) {
+      console.log(`[WEBHOOK] ${event.type} skipped, payment ${paymentKey} already handled`);
+      return res.json({ received: true, duplicate: true });
+    }
+    handledPayments.add(paymentKey);
+    if (handledPayments.size > 500) handledPayments.delete(handledPayments.values().next().value);
 
     if (!phone) {
       try {
@@ -55,8 +66,8 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
         console.log(`[WEBHOOK] conv.step:${conv.step}`);
 
         if (conv.step === 'await_ticket_payment') {
-          const receipt = await getReceiptText(amount, firstName, 'event', s.receiptMessage||null);
-          await smsOut(phone, `${receipt}\n\n${confirmation}`);
+          const receipt = await getReceiptText(amount, firstName, 'event', s.receiptMessage||null, { noClosing: true });
+          await smsOut(phone, `${receipt}\n\n${confirmation}${SIGN_OFF}`);
           markRsvpPaid(phone, conv.eventId, amount);
           db.clearConversation(phone);
 
@@ -71,8 +82,8 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
           } else { db.clearConversation(phone); await smsOut(phone, confirmation); }
 
         } else if (conv.step === 'await_donation_payment') {
-          const receipt = await getReceiptText(amount, firstName, 'donation', s.receiptMessage||null);
-          await smsOut(phone, `${receipt}\n\n${confirmation}`);
+          const receipt = await getReceiptText(amount, firstName, 'donation', s.receiptMessage||null, { noClosing: true });
+          await smsOut(phone, `${receipt}\n\n${confirmation}${SIGN_OFF}`);
           if (conv.eventId) db.saveRsvp(conv.eventId, phone, { donationAmount: amount });
           db.clearConversation(phone);
 

@@ -1,7 +1,7 @@
 // sms.js
 const db = require('./db');
 const { getSettings } = require('./settings');
-const { getOrCreateCustomer, getSavedCard, chargeCardOnFile, createPaymentLink, getReceiptText } = require('./payments');
+const { getOrCreateCustomer, getSavedCard, chargeCardOnFile, createPaymentLink, getReceiptText, SIGN_OFF } = require('./payments');
 
 const DEFAULT_ANNOUNCEMENT_REPLY = 'This is an automated system. To reach the Rabbi please text (914) 330-1307';
 
@@ -295,15 +295,15 @@ async function handleCardConfirm(phone, msg, contact, conv, s) {
     if (result.success) {
       if (isTicket) {
         db.saveRsvp(event?.id || conv.eventId, phone, { paymentStatus: 'paid', chargedOnFile: true });
-        const receiptText = await getReceiptText(pendingAmount, getFirstName(contact), 'event', s.receiptMessage || null);
+        const receiptText = await getReceiptText(pendingAmount, getFirstName(contact), 'event', s.receiptMessage || null, { noClosing: !isPaidDonation });
         if (isPaidDonation) { const donMsg = await startDonationFlow(phone, contact, event, s); return `${receiptText}\n\n${donMsg}`; }
         db.clearConversation(phone);
-        return `${receiptText}\n\n${confirmationMessage(event, s)}`;
+        return `${receiptText}\n\n${confirmationMessage(event, s)}${SIGN_OFF}`;
       } else {
         db.saveRsvp(event?.id || conv.eventId, phone, { donationAmount: pendingAmount, chargedOnFile: true });
         db.clearConversation(phone);
-        const receiptText = await getReceiptText(pendingAmount, getFirstName(contact), 'donation', s.receiptMessage || null);
-        return `${receiptText}\n\n${confirmationMessage(event, s)}`;
+        const receiptText = await getReceiptText(pendingAmount, getFirstName(contact), 'donation', s.receiptMessage || null, { noClosing: true });
+        return `${receiptText}\n\n${confirmationMessage(event, s)}${SIGN_OFF}`;
       }
     }
     if (result.requiresAction) {

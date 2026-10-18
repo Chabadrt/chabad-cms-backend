@@ -74,12 +74,15 @@ async function createPaymentLink(amountDollars, eventName, customerId = null, ph
   } catch (err) { console.error(`[STRIPE] createPaymentLink:`, err.message); throw err; }
 }
 
-async function getReceiptText(amountDollars, donorName, receiptType, customMessage) {
+const SIGN_OFF = `\n\n— Rabbi Benjy & Hinda Silverman ❤️`;
+
+// opts.noClosing: leave off the sign-off so the caller can put it once at the end of a combined message.
+async function getReceiptText(amountDollars, donorName, receiptType, customMessage, opts = {}) {
   const name = donorName ? `, ${donorName}` : '';
-  const closing = `\n\n— Rabbi Benjy & Hinda Silverman ❤️`;
+  const closing = opts.noClosing ? '' : SIGN_OFF;
   if (customMessage) return customMessage.replace('{name}', donorName||'').replace('{amount}', `$${amountDollars}`) + closing;
-  if (receiptType === 'event') return `✅ Got it${name}! Your payment of $${amountDollars} has been received.\n\nWe're looking forward to seeing you!` + closing;
-  return `❤️ Thank you${name}! Your donation of $${amountDollars} to Chabad of the Rivertowns has been received.\n\nYour generosity makes our community thrive.` + closing;
+  if (receiptType === 'event') return `✅ Got it${name}! Your $${amountDollars} payment is received.` + closing;
+  return `❤️ Thank you${name}! Your $${amountDollars} donation to Chabad of the Rivertowns has been received.` + closing;
 }
 
-module.exports = { getOrCreateCustomer, getSavedCard, chargeCardOnFile, createPaymentLink, getReceiptText };
+module.exports = { getOrCreateCustomer, getSavedCard, chargeCardOnFile, createPaymentLink, getReceiptText, SIGN_OFF };
