@@ -182,9 +182,14 @@ app.post('/blast', async (req, res) => {
 
   // For announcements, no RSVP prompt
   const isAnnouncement = event.eventType === 'announcement';
+  // If a custom message is written on a non-announcement blast, it replaces the greeting,
+  // bot intro and auto-generated question. The RSVP prompt is still appended.
+  const hasCustom = !isAnnouncement && !!(event.customMessage && event.customMessage.trim());
   const baseMsg = isAnnouncement
     ? event.customMessage || ''
-    : `${s.botIntro}\n\nWill you be joining us for ${event.name} ${event.date} @ ${event.time}?${event.customMessage ? '\n\n' + event.customMessage : ''}\n\n${s.rsvpPrompt}`;
+    : hasCustom
+      ? `${event.customMessage.trim()}\n\n${s.rsvpPrompt}`
+      : `${s.botIntro}\n\nWill you be joining us for ${event.name} ${event.date} @ ${event.time}?\n\n${s.rsvpPrompt}`;
 
   let sent = 0, failed = 0;
   for (const phone of phones) {
@@ -192,8 +197,8 @@ app.post('/blast', async (req, res) => {
       const contact = db.getContact(phone);
       if (contact?.unsubscribed) { failed++; continue; }
       const firstName = contact?.name ? contact.name.split(' ')[0] : null;
-      const greeting = isAnnouncement ? (firstName ? `Hi ${firstName}! ` : 'Hi! ') : (firstName ? `Hi ${firstName}! ` : 'Hi! ');
-      const msgBody = `${greeting}${baseMsg}`;
+      const greeting = hasCustom ? '' : (firstName ? `Hi ${firstName}! ` : 'Hi! ');
+      const msgBody = `${greeting}${baseMsg}`.replace(/\{first_name\}/gi, firstName || 'there');
       await twilioClient.messages.create({ body: msgBody, from: process.env.TWILIO_PHONE_NUMBER, to: phone, statusCallback: statusCallbackUrl() });
       db.saveContact(phone, { lastEventId: eventId, lastBlastAt: new Date().toISOString() });
       db.clearConversation(phone);

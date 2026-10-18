@@ -95,7 +95,7 @@ td{padding:10px 11px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-ali
       <div class="form-group"><label>Date</label><input type="text" id="evt-date" placeholder="Friday, June 27" oninput="updatePreview()"></div>
       <div class="form-group"><label>Time</label><input type="text" id="evt-time" placeholder="7:00 PM" oninput="updatePreview()"></div>
     </div>
-    <div class="form-group"><label>Message <span class="hint">(for announcements, this is the full message)</span></label><textarea id="evt-msg" placeholder="e.g. Join our WhatsApp group: wa.me/..." oninput="updatePreview()"></textarea></div>
+    <div class="form-group"><label>Message <span class="hint">(optional. If filled in, it replaces the greeting and question. Use {first_name} for their name. The reply instructions are added automatically.)</span></label><textarea id="evt-msg" placeholder="e.g. Join our WhatsApp group: wa.me/..." oninput="updatePreview()"></textarea></div>
     <div class="form-group"><label>Confirmation Note <span class="hint">(appended to confirmation SMS)</span></label><input type="text" id="evt-confirm" placeholder="Looking forward to seeing you! 🙏"></div>
   </div>
 
@@ -560,9 +560,9 @@ function updatePreview(){
   if(type==='announcement'){document.getElementById('preview').textContent='Hi [First Name]! '+(msg||'[Your message here]');return;}
   const intro=currentSettings.botIntro||"This is Rabbi Benjy's new texting bot 🤖";
   const prompt=currentSettings.rsvpPrompt||"Please reply:\n1 — I'll be there 🙏\n2 — Can't make it this time";
-  let preview='Hi [First Name]! '+intro+'\n\nWill you be joining us for '+name+' '+date+' @ '+time+'?';
-  if(msg)preview+='\n\n'+msg;
-  preview+='\n\n'+prompt;
+  let preview;
+  if(msg.trim()){preview=msg.trim().replace(/\{first_name\}/gi,'[First Name]')+'\n\n'+prompt;}
+  else{preview='Hi [First Name]! '+intro+'\n\nWill you be joining us for '+name+' '+date+' @ '+time+'?\n\n'+prompt;}
   document.getElementById('preview').textContent=preview;
 }
 
