@@ -6,7 +6,7 @@ const fs = require('fs');
 const { handleIncoming } = require('./sms');
 const { importContacts } = require('./import');
 const { getSettings, saveSettings } = require('./settings');
-const { getReceiptText, SIGN_OFF } = require('./payments');
+const { getReceiptText, SIGN_OFF, getOrCreateCustomer, createPaymentLink } = require('./payments');
 const db = require('./db');
 
 const app = express();
@@ -23,6 +23,29 @@ try {
     }
   }
 } catch (e) { console.error('[FIX] ticket price fix failed:', e.message); }
+
+// ONE-TIME FIX (Oct 18 2026): Beth Fossner's 2 Adult tickets were quoted at the old $2 test price ($4).
+// Deactivate that link and issue a $110 link ($55 x 2). Runs once: skipped when her ticketPrice is no longer 4.
+(async () => {
+  try {
+    const evId = 'evt_1792368537032', phone = '+16466752565';
+    const rsvp = db.getRsvpsForEvent(evId).find(r => r.phone === phone);
+    if (!rsvp || Number(rsvp.ticketPrice) !== 4 || rsvp.paymentStatus !== 'pending' || rsvp.ticketType !== '2x Adult') return;
+    const ev = db.getEvent(evId); const contact = db.getContact(phone);
+    const oldLink = rsvp.ticketPaymentLink;
+    const customerId = await getOrCreateCustomer(phone, contact?.name);
+    const link = await createPaymentLink(110, `${ev.name.trim()} — 2x Adult`, customerId, phone, true);
+    db.saveRsvp(evId, phone, { ticketPrice: 110, ticketPaymentLink: link, oldTicketPaymentLink: oldLink });
+    db.saveConversation(phone, { step: 'await_ticket_payment', eventId: evId });
+    console.log(`[FIX] Beth Fossner new $110 link created: ${link}`);
+    try {
+      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+      const links = await stripe.paymentLinks.list({ limit: 100 });
+      const old = links.data.find(l => l.url === oldLink);
+      if (old) { await stripe.paymentLinks.update(old.id, { active: false }); console.log('[FIX] old $4 link deactivated'); }
+    } catch (e) { console.error('[FIX] could not deactivate old link:', e.message); }
+  } catch (e) { console.error('[FIX] Beth link fix failed:', e.message); }
+})();
 
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
