@@ -10,6 +10,20 @@ const { getReceiptText, SIGN_OFF } = require('./payments');
 const db = require('./db');
 
 const app = express();
+
+// ── ONE-TIME FIX (Oct 18 2026): the Friday Oct 23 Shabbat dinner blast went out with a $2 test ticket price.
+// Set the real prices on those events at startup. Safe to run repeatedly; remove after it has run once.
+try {
+  for (const id of ['evt_1792368537032', 'evt_1792368435264']) {
+    const ev = db.getEvent(id);
+    if (ev && Array.isArray(ev.tickets) && ev.tickets.length === 1 && ev.tickets[0].label === 'Adult' && Number(ev.tickets[0].price) === 2) {
+      ev.tickets = [{ label: 'Adult', price: 55 }, { label: 'Child', price: 15 }];
+      db.saveEvent(ev);
+      console.log(`[FIX] ${id} ticket prices set to Adult $55, Child $15`);
+    }
+  }
+} catch (e) { console.error('[FIX] ticket price fix failed:', e.message); }
+
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // ── STRIPE WEBHOOK ────────────────────────────────────────
